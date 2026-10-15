@@ -556,3 +556,6 @@ Para comprobar la funcionalidad del punto de partida antes de avanzar con las si
    ```bash
    npm run test:concurrencia
    ```
+
+<!-- Revisión técnica y validación final de arquitectura para entrega TP5 -->
+
