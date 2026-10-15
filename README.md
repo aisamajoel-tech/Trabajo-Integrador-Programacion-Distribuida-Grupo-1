@@ -18,7 +18,7 @@ Repositorio único y evolutivo para los Trabajos Prácticos de la cátedra de Pr
 
 ## 👥 Integrantes del Grupo
 * **Aisama Joel** (DNI: 44.537.211)
-* [Completar Nombre y Apellido]
+* **Bautista Navarro** (DNI: 45.722.618)
 * [Completar Nombre y Apellido]
 
 ### Docentes Colaboradores
