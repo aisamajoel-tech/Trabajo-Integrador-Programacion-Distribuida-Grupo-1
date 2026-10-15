@@ -11,7 +11,7 @@
 * **Grupo:** Grupo N° [Completar número de grupo]
 * **Integrantes:**
   * Aisama Joel (DNI: 44.537.211) - aisamajoel@gmail.com
-  * [Completar Nombre y Apellido] (DNI: [Completar]) - [Completar correo]
+  * Bautista Navarro (DNI: 45.722.618) - bautista.navarro@uch.edu.ar
   * [Completar Nombre y Apellido] (DNI: [Completar]) - [Completar correo]
 * **Docentes de Cátedra:**
   * Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
