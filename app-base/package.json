@@ -1,0 +1,35 @@
+{
+  "name": "tp1-programacion-distribuida",
+  "version": "2.0.0",
+  "description": "API REST con HTTPS y Exclusión Mutua con Redis/Memurai - Programación Distribuida",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "cert:generate": "node scripts/generate-cert.js",
+    "test:concurrencia": "node test-concurrencia.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "rest",
+    "https",
+    "concurrency",
+    "race-condition",
+    "redis",
+    "memurai",
+    "distributed-lock"
+  ],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "mongoose": "^9.9.4",
+    "redis": "^4.7.0",
+    "selfsigned": "^2.4.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}

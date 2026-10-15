@@ -1,0 +1,19 @@
+# Dependencias
+node_modules/
+npm-debug.log*
+
+# Entorno y credenciales
+.env
+*.key
+*.pem
+!certs/cert.pem
+
+# Logs
+logs/
+*.log
+
+# Editores y SO
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

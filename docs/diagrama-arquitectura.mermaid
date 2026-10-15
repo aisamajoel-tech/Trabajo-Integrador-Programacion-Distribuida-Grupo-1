@@ -1,0 +1,49 @@
+flowchart TD
+    subgraph Clientes [Clientes del Sistema]
+        ClientApp["Cliente Web / Mobile / Postman"]
+    end
+
+    subgraph API_Entry [Puntos de Entrada]
+        ClientApp -->|"1. HTTP POST /api/ordenes (Comprar)"| OrdersSvc
+        ClientApp -->|"HTTP GET /api/libros (Explorar catálogo)"| CatalogSvc
+        ClientApp -->|"HTTP GET /api/inventario/:libroId (Consultar stock)"| InventorySvc
+    end
+
+    subgraph Dominio_Microservicios [Arquitectura de Microservicios Desacoplada]
+        subgraph Serv_Orders [orders-service : Servicio de Ventas]
+            OrdersSvc["Servicio de Órdenes / Ventas<br/><b>orders-service</b><br/>Puerto: 3003"]
+            DB_Orders[("MongoDB Orders<br/>Base: db_orders<br/>Colección: ordenes")]
+            OrdersSvc --- DB_Orders
+        end
+
+        subgraph Serv_Catalog [catalog-service : Servicio de Catálogo]
+            CatalogSvc["Servicio de Catálogo de Libros<br/><b>catalog-service</b><br/>Puerto: 3001"]
+            DB_Catalog[("MongoDB Catalog<br/>Base: db_catalog<br/>Colección: libros")]
+            CatalogSvc --- DB_Catalog
+        end
+
+        subgraph Serv_Inventory [inventory-service : Servicio de Inventario]
+            InventorySvc["Servicio de Inventario y Stock<br/><b>inventory-service</b><br/>Puerto: 3002"]
+            DB_Inventory[("MongoDB Inventory<br/>Base: db_inventory<br/>Colección: stock")]
+            Redis_Lock[("Redis / Memurai<br/>Distributed Lock<br/>lock:libro:{id}")]
+            InventorySvc --- DB_Inventory
+            InventorySvc --- Redis_Lock
+        end
+    end
+
+    %% Comunicaciones inter-servicio síncronas HTTP REST
+    OrdersSvc -->|"2. GET /api/libros/:id<br/>(Verificar existencia de libro)"| CatalogSvc
+    OrdersSvc -->|"3. POST /api/inventario/:libroId/descontar<br/>(Validar y descontar stock con Lock)"| InventorySvc
+
+    %% Estilos visuales
+    classDef client fill:#e1f5fe,stroke:#0288d1,stroke-width:2px;
+    classDef orders fill:#ede7f6,stroke:#512da8,stroke-width:2px;
+    classDef catalog fill:#e8f5e9,stroke:#388e3c,stroke-width:2px;
+    classDef inventory fill:#fff3e0,stroke:#f57c00,stroke-width:2px;
+    classDef storage fill:#eceff1,stroke:#455a64,stroke-width:1px;
+
+    class ClientApp client;
+    class OrdersSvc orders;
+    class CatalogSvc catalog;
+    class InventorySvc inventory;
+    class DB_Orders,DB_Catalog,DB_Inventory,Redis_Lock storage;

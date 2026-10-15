@@ -1,0 +1,24 @@
+# Dependencias
+node_modules/
+
+# Archivos de entorno y credenciales (información sensible)
+.env
+.env.local
+
+# Certificados y claves privadas
+certs/
+*.key
+*.pem
+*.cert
+*.crt
+
+# Logs del sistema y rotación de Winston (excluidos de entrega según TP3)
+logs/
+*.log
+npm-debug.log*
+
+# Archivos de sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
