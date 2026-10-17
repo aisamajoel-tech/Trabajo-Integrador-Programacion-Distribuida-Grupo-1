@@ -1,85 +1,93 @@
-# 📌 Plan de División de Tareas y Ramas - TP N° 5
-**Programación Distribuida - Trabajo Integrador**
+# 📌 Plan de Tareas e Issues por Integrante - TP N° 5
+**Programación Distribuida - Trabajo Integrador Grupo N° 1**  
+**Repositorio:** [https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1](https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1)
 
-Para cumplir con el requerimiento de trazabilidad individual y trabajo colaborativo sin conflictos ni pisarse, el trabajo se divide en dos grandes frentes de responsabilidad técnica:
-
----
-
-## 👤 Integrante 1: Joel Aisama
-### Responsabilidad: Dominios de Catálogo y Órdenes de Compra
-
-* **Rama de trabajo:** `feature/catalog-and-orders-spec`
-* **Módulos asignados:**
-  1. Especificación del **`catalog-service`**:
-     * Definición de contratos DTO de entrada y salida para `GET /api/libros`, `POST /api/libros`, etc.
-     * Esquema de persistencia propio en MongoDB (`db_catalog`).
-  2. Especificación del **`orders-service`**:
-     * Diseño del contrato del endpoint de orquestación `POST /api/ordenes`.
-     * Modelo de datos inmutable de la orden (`ordenId`, `clienteId`, `libroId`, `cantidad`, `estado`).
-  3. Trazado del flujo del **Caso de Uso B**:
-     * Diagramación de la secuencia de compra desde el cliente hacia `orders-service` y llamadas REST.
-
-### Comandos de ejecución para Joel:
-```bash
-# 1. Crear y cambiarse a su rama
-git checkout main
-git pull origin main
-git checkout -b feature/catalog-and-orders-spec
-
-# 2. Realizar sus aportes o revisiones en los archivos correspondientes
-# 3. Guardar cambios y subir a GitHub
-git add .
-git commit -m "feat(catalog,orders): refine service contracts and order orchestration flow"
-git push -u origin feature/catalog-and-orders-spec
-```
-*Luego, Joel abre el Pull Request en GitHub y solicita la revisión de Bautista.*
+Para garantizar la trazabilidad individual que exige la cátedra sin hacer el proyecto innecesariamente complejo ("lo justo y necesario"), el trabajo se divide de manera equitativa entre los **4 integrantes**:
 
 ---
 
-## 👤 Integrante 2: Bautista Navarro
-### Responsabilidad: Dominio de Inventario, Concurrencia y Resiliencia
-
-* **Rama de trabajo:** `feature/inventory-and-concurrency-spec`
-* **Módulos asignados:**
-  1. Especificación del **`inventory-service`**:
-     * Definición del endpoint `POST /api/inventario/:libroId/descontar`.
-     * Integración del mecanismo de exclusión mutua distribuida con Redis/Memurai (clave `lock:libro:{id}`, TTL 5000ms y script Lua).
-  2. Análisis de Acoplamientos y Checklist:
-     * Fundamentación técnica de los 3 casos de acoplamiento resueltos.
-     * Completado y validación de las 9 casillas del Checklist de límites arquitectónicos (Sección 12).
-  3. Matriz de Propiedad de Datos:
-     * Especificación de reglas de acceso a las existencias de stock y claves de lock.
-
-### Comandos de ejecución para Bautista:
-```bash
-# 1. Traer los cambios actualizados del repo
-git checkout main
-git pull origin main
-
-# 2. Crear y cambiarse a su rama
-git checkout -b feature/inventory-and-concurrency-spec
-
-# 3. Realizar sus aportes o revisiones
-# 4. Guardar cambios y subir a GitHub
-git add .
-git commit -m "feat(inventory): specify stock concurrency lock and data ownership matrix"
-git push -u origin feature/inventory-and-concurrency-spec
-```
-*Luego, Bautista abre el Pull Request en GitHub y solicita la revisión de Joel.*
+## 👤 1. Joel Aisama (@aisamajoel-tech)
+### Issue #1: [Catálogo] Especificación técnica de contratos y persistencia de Libros
+* **Rama asignada:** `feature/catalog-service-spec`
+* **Tareas a cargo:**
+  1. Especificación técnica del **`catalog-service`**:
+     * Definición de contratos DTO de entrada y salida para `GET /api/libros`, `GET /api/libros/:id` y `POST /api/libros`.
+     * Confirmar el esquema propio en MongoDB (`db_catalog`), eliminando el campo `stock` de la colección `libros`.
+     * Documentar las reglas de validación bibliográfica (ISBN, título, autor, género).
+* **Comandos en Git:**
+  ```bash
+  git checkout main
+  git pull origin main
+  git checkout -b feature/catalog-service-spec
+  git add .
+  git commit -m "feat(catalog): specify book catalog endpoints and schema boundaries (Closes #1)"
+  git push -u origin feature/catalog-service-spec
+  ```
 
 ---
 
-## 🔄 Flujo de Revisión Cruzada (Code Review)
-1. **Bautista revisa el PR de Joel:** Entra al PR de Joel, deja un comentario de aprobación (ej: *"Revisado y aprobado el contrato de órdenes y catálogo"*) y hace el merge a `main`.
-2. **Joel revisa el PR de Bautista:** Entra al PR de Bautista, deja un comentario de aprobación (ej: *"Revisada la especificación de exclusión mutua con Redis y matriz de stock"*) y hace el merge a `main`.
+## 👤 2. Bautista Navarro (@BautiNavarro)
+### Issue #2: [Inventario] Control de stock y exclusión mutua distribuida con Redis Lock
+* **Rama asignada:** `feature/inventory-concurrency-spec`
+* **Tareas a cargo:**
+  1. Especificación técnica del **`inventory-service`**:
+     * Definición del endpoint `POST /api/inventario/:libroId/descontar` para operaciones de compra.
+     * Documentar el mecanismo de exclusión mutua con **Redis/Memurai**: clave `lock:libro:{id}`, TTL de 5000ms y script Lua de liberación atómica por token.
+     * Especificar la respuesta `HTTP 409 Conflict` cuando el lock está retenido concurrentemente.
+* **Comandos en Git:**
+  ```bash
+  git checkout main
+  git pull origin main
+  git checkout -b feature/inventory-concurrency-spec
+  git add .
+  git commit -m "feat(inventory): specify stock concurrency and redis lock mechanism (Closes #2)"
+  git push -u origin feature/inventory-concurrency-spec
+  ```
 
 ---
 
-## 🏷️ Cierre y Tag Final de Entrega
-Una vez que ambos Pull Requests estén integrados en `main`:
-```bash
-git checkout main
-git pull origin main
-git tag -a tp5-entrega-final -m "Entrega final TP5 completada por ambos integrantes"
-git push origin tp5-entrega-final
-```
+## 👤 3. Candela Aguilar (@candeaguilar)
+### Issue #3: [Ventas] Servicio de Órdenes y trazado del flujo de compras
+* **Rama asignada:** `feature/orders-service-spec`
+* **Tareas a cargo:**
+  1. Especificación técnica del **`orders-service`**:
+     * Diseño del modelo de datos de la colección `ordenes` en MongoDB (`db_orders`): inmutabilidad, estados (`PENDIENTE`, `CONFIRMADA`, `RECHAZADA`).
+     * Definición del endpoint `POST /api/ordenes` y sus llamadas REST salientes a catálogo e inventario.
+     * Trazado del **Caso de Uso B**: flujo paso a paso de compra concurrente con validación de existencia y descuento de stock.
+* **Comandos en Git:**
+  ```bash
+  git checkout main
+  git pull origin main
+  git checkout -b feature/orders-service-spec
+  git add .
+  git commit -m "feat(orders): specify order orchestration service and purchase flow (Closes #3)"
+  git push -u origin feature/orders-service-spec
+  ```
+
+---
+
+## 👤 4. Delfina Ibáñez (@delfinaibanez)
+### Issue #4: [Arquitectura] Análisis de acoplamientos y checklist de validación de límites
+* **Rama asignada:** `feature/architecture-validation`
+* **Tareas a cargo:**
+  1. Fundamentación y validación arquitectónica:
+     * Documentar los **3 casos concretos de acoplamiento** del monolito previo y sus propuestas de desacople.
+     * Elaborar la **Matriz de Propiedad de Datos** (Data Ownership: qué servicio es dueño de qué datos).
+     * Completar y verificar las 9 casillas del **Checklist de validación de límites de microservicios** (Sección 12 del enunciado).
+* **Comandos en Git:**
+  ```bash
+  git checkout main
+  git pull origin main
+  git checkout -b feature/architecture-validation
+  git add .
+  git commit -m "docs(architecture): document coupling analysis and service boundaries checklist (Closes #4)"
+  git push -u origin feature/architecture-validation
+  ```
+
+---
+
+## 🔄 Flujo de Integración y Pull Requests
+1. Cada integrante sube su rama a GitHub.
+2. Abre su **Pull Request** hacia `main` mencionando la Issue correspondiente (`Closes #1`, `Closes #2`, `Closes #3` o `Closes #4`).
+3. Otro compañero revisa el Pull Request, deja un comentario de aprobación y realiza el **Merge**.
+4. Al mergear, la Issue asignada se cierra automáticamente en GitHub.

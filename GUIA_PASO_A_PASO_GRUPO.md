@@ -42,7 +42,7 @@ git init
 git branch -M main
 
 # 2. Vincular el repositorio remoto de GitHub (reemplazar la URL por la de su repo)
-git remote add origin https://github.com/aisamajoel-tech/programacion-distribuida-tp-integrador.git
+git remote add origin https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1.git
 
 # 3. Guardar y subir la versión base inicial
 git add .
@@ -57,7 +57,7 @@ Cada integrante clona el repositorio en su computadora y configura su identidad 
 
 ```bash
 # Clonar el proyecto
-git clone https://github.com/aisamajoel-tech/programacion-distribuida-tp-integrador.git
+git clone https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1.git
 cd programacion-distribuida-tp-integrador
 
 # Configurar nombre y correo institucional/real

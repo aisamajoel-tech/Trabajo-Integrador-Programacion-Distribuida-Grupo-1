@@ -1,29 +1,32 @@
-# Programación Distribuida - Trabajo Integrador
-**Universidad Champagnat - Licenciatura en Sistemas de Información**
+# Programación Distribuida - Trabajo Práctico Integrador
+**Universidad Champagnat - Licenciatura en Sistemas de Información**  
+**Grupo N° 1**
 
 Repositorio único y evolutivo para los Trabajos Prácticos de la cátedra de Programación Distribuida.
+
+---
+
+## 👥 Integrantes del Grupo 1
+* **Joel Aisama** (DNI: 44.537.211) - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
+* **Bautista Navarro** (DNI: 45.722.618) - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
+* **Candela Aguilar** - GitHub: [@candeaguilar](https://github.com/candeaguilar)
+* **Delfina Ibáñez** - GitHub: [@delfinaibanez](https://github.com/delfinaibanez)
+
+### Docentes Colaboradores
+* Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
+* Prof. Edgardo Cortez (`cortezedgardo@uch.edu.ar`)
 
 ---
 
 ## 📂 Estructura del Repositorio
 
 * **`docs/`**: Contiene la documentación arquitectónica y de diseño del sistema.
-  * **[`docs/arquitectura.md`](docs/arquitectura.md)**: Documento maestro del **TP N° 5: De API REST a Microservicios** (inventario funcional, análisis de acoplamientos, fichas de microservicios, propiedad de datos, matrices de comunicación y trazado de casos de uso).
+  * **[`docs/arquitectura.md`](docs/arquitectura.md)**: **Documento maestro de entrega del TP N° 5: De API REST a Microservicios** (inventario funcional, análisis de acoplamientos, fichas de 3 microservicios, propiedad de datos, matrices de comunicación HTTP y trazado de casos de uso).
   * **[`docs/diagrama-arquitectura.mermaid`](docs/diagrama-arquitectura.mermaid)**: Diagrama de arquitectura en formato editable.
-* **`app-base/`**: Aplicación de partida funcional (API REST monolítica desarrollada en Node.js, Express, MongoDB, Redis, Winston y HTTPS).
+  * **[`docs/PLAN_DE_TAREAS_EQUIPO.md`](docs/PLAN_DE_TAREAS_EQUIPO.md)**: Reparto de tareas e Issues para los 4 integrantes.
+* **`app-base/`**: Aplicación de partida funcional (API REST monolítica desarrollada en Node.js, Express, MongoDB, Redis Lock, Winston y HTTPS).
 * **`.gitignore`**: Reglas de exclusión de dependencias (`node_modules`), logs, claves privadas y variables sensibles.
 * **`.env.example`**: Archivo de ejemplo con variables de entorno para inicializar el proyecto.
-
----
-
-## 👥 Integrantes del Grupo
-* **Aisama Joel** (DNI: 44.537.211)
-* **Bautista Navarro** (DNI: 45.722.618)
-* [Completar Nombre y Apellido]
-
-### Docentes Colaboradores
-* Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
-* Prof. Edgardo Cortez (`cortezedgardo@uch.edu.ar`)
 
 ---
 
@@ -64,13 +67,13 @@ npm start
 
 ## 🌿 Flujo de Trabajo con Git y Entregas
 
-Este repositorio utiliza el flujo de ramas temáticas y Pull Requests:
-1. `feature/*`: Desarrollo de nuevas capacidades y servicios.
+Este repositorio utiliza el flujo de ramas temáticas, Issues y Pull Requests:
+1. `feature/*`: Desarrollo de nuevas capacidades y contratos de servicios.
 2. `docs/*`: Documentación técnica y diagramas.
 3. `main`: Rama estable que contiene las entregas validadas.
 
 ### Marcado de Entrega (TP5)
-Una vez integrado el trabajo en `main`, la entrega queda identificada con su respectivo tag:
+La versión aprobada correspondiente al TP5 se encuentra identificada con su respectivo tag:
 ```bash
 git tag tp5-entrega
 git push origin tp5-entrega

@@ -8,15 +8,16 @@
 
 * **Fecha de Entrega:** Octubre 2026
 * **Materia:** Programación Distribuida
-* **Grupo:** Grupo N° [Completar número de grupo]
-* **Integrantes:**
-  * Aisama Joel (DNI: 44.537.211) - aisamajoel@gmail.com
-  * Bautista Navarro (DNI: 45.722.618) - bautista.navarro@uch.edu.ar
-  * [Completar Nombre y Apellido] (DNI: [Completar]) - [Completar correo]
+* **Grupo:** Grupo N° 1
+* **Integrantes del Grupo 1:**
+  * **Joel Aisama** (DNI: 44.537.211) - aisamajoel@gmail.com - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
+  * **Bautista Navarro** (DNI: 45.722.618) - bautista.navarro@uch.edu.ar - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
+  * **Candela Aguilar** - candeaguilar@uch.edu.ar - GitHub: [@candeaguilar](https://github.com/candeaguilar)
+  * **Delfina Ibáñez** - delfinaibanez@uch.edu.ar - GitHub: [@delfinaibanez](https://github.com/delfinaibanez)
 * **Docentes de Cátedra:**
   * Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
   * Prof. Edgardo Cortez (`cortezedgardo@uch.edu.ar`)
-* **Repositorio Único del Proyecto:** `https://github.com/aisamajoel-tech/programacion-distribuida-tp-integrador` *(Reemplazar con la URL remota definitiva)*
+* **Repositorio Único del Proyecto:** `https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1` *(Reemplazar con la URL remota definitiva)*
 
 ---
 
