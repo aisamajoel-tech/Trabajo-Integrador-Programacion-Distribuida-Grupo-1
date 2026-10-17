@@ -7,8 +7,8 @@ Repositorio único y evolutivo para los Trabajos Prácticos de la cátedra de Pr
 ---
 
 ## 👥 Integrantes del Grupo 1
-* **Joel Aisama** (DNI: 44.537.211) - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
-* **Bautista Navarro** (DNI: 45.722.618) - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
+* **Joel Aisama**  - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
+* **Bautista Navarro**  - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
 * **Candela Aguilar** - GitHub: [@candeaguilar](https://github.com/candeaguilar)
 * **Delfina Ibáñez** - GitHub: [@delfinaibanez](https://github.com/delfinaibanez)
 
