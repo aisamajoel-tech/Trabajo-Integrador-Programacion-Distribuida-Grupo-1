@@ -9,11 +9,12 @@
 * **Fecha de Entrega:** Octubre 2026
 * **Materia:** Programación Distribuida
 * **Grupo:** Grupo N° 1
-* **Integrantes del Grupo 1:**
+* **Integrantes del Grupo 1 (5 integrantes):**
   * **Joel Aisama** (DNI: 44.537.211) - aisamajoel@gmail.com - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
   * **Bautista Navarro** (DNI: 45.722.618) - bautista.navarro@uch.edu.ar - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
   * **Candela Aguilar** - candeaguilar@uch.edu.ar - GitHub: [@candeaguilar](https://github.com/candeaguilar)
   * **Delfina Ibáñez** - delfinaibanez@uch.edu.ar - GitHub: [@delfinaibanez](https://github.com/delfinaibanez)
+  * **Carolina Fetta** - carolina.fetta@uch.edu.ar - GitHub: [@gcfetta](https://github.com/gcfetta)
 * **Docentes de Cátedra:**
   * Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
   * Prof. Edgardo Cortez (`cortezedgardo@uch.edu.ar`)

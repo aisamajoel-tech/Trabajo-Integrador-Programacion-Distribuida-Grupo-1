@@ -6,11 +6,12 @@ Repositorio único y evolutivo para los Trabajos Prácticos de la cátedra de Pr
 
 ---
 
-## 👥 Integrantes del Grupo 1
-* **Joel Aisama**  - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
-* **Bautista Navarro**  - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
+## 👥 Integrantes del Grupo 1 (5 integrantes)
+* **Joel Aisama** (DNI: 44.537.211) - GitHub: [@aisamajoel-tech](https://github.com/aisamajoel-tech)
+* **Bautista Navarro** (DNI: 45.722.618) - GitHub: [@BautiNavarro](https://github.com/BautiNavarro)
 * **Candela Aguilar** - GitHub: [@candeaguilar](https://github.com/candeaguilar)
 * **Delfina Ibáñez** - GitHub: [@delfinaibanez](https://github.com/delfinaibanez)
+* **Carolina Fetta** - GitHub: [@gcfetta](https://github.com/gcfetta)
 
 ### Docentes Colaboradores
 * Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)

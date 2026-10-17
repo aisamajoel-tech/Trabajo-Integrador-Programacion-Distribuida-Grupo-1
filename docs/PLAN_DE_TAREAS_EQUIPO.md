@@ -1,8 +1,8 @@
 # 📌 Plan de Tareas e Issues por Integrante - TP N° 5
-**Programación Distribuida - Trabajo Integrador Grupo N° 1**  
+**Programación Distribuida - Trabajo Integrador Grupo N° 1 (5 Integrantes)**  
 **Repositorio:** [https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1](https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1)
 
-Para garantizar la trazabilidad individual que exige la cátedra sin hacer el proyecto innecesariamente complejo ("lo justo y necesario"), el trabajo se divide de manera equitativa entre los **4 integrantes**:
+Para garantizar la trazabilidad individual que exige la cátedra sin hacer el proyecto innecesariamente complejo ("lo justo y necesario"), el trabajo se divide de manera equitativa entre los **5 integrantes**:
 
 ---
 
@@ -86,8 +86,28 @@ Para garantizar la trazabilidad individual que exige la cátedra sin hacer el pr
 
 ---
 
+## 👤 5. Carolina Fetta (@gcfetta)
+### Issue #5: [Comunicaciones] Matriz de comunicación HTTP/REST y resiliencia ante fallos
+* **Rama asignada:** `feature/service-communication-spec`
+* **Tareas a cargo:**
+  1. Especificación de comunicaciones inter-servicio:
+     * Completar la **Matriz de Comunicaciones HTTP/REST** (origen, destino, método, payloads y respuestas esperadas).
+     * Responder las 5 preguntas analíticas de comunicación de la Sección 10 (necesidad de conocimiento, evitar duplicación de reglas, encapsulamiento).
+     * Definir la estrategia de **resiliencia y degradación elegante** ante caída de un servicio destino (`503 Service Unavailable`, timeouts y circuit breaker).
+* **Comandos en Git:**
+  ```bash
+  git checkout main
+  git pull origin main
+  git checkout -b feature/service-communication-spec
+  git add .
+  git commit -m "feat(comm): specify inter-service REST contracts and fault resilience (Closes #5)"
+  git push -u origin feature/service-communication-spec
+  ```
+
+---
+
 ## 🔄 Flujo de Integración y Pull Requests
 1. Cada integrante sube su rama a GitHub.
-2. Abre su **Pull Request** hacia `main` mencionando la Issue correspondiente (`Closes #1`, `Closes #2`, `Closes #3` o `Closes #4`).
+2. Abre su **Pull Request** hacia `main` mencionando la Issue correspondiente (`Closes #1`, `Closes #2`, `Closes #3`, `Closes #4` o `Closes #5`).
 3. Otro compañero revisa el Pull Request, deja un comentario de aprobación y realiza el **Merge**.
 4. Al mergear, la Issue asignada se cierra automáticamente en GitHub.
