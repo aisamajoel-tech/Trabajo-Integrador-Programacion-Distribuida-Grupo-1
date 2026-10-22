@@ -18,7 +18,7 @@
 * **Docentes de Cátedra:**
   * Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
   * Prof. Edgardo Cortez (`cortezedgardo@uch.edu.ar`)
-* **Repositorio Único del Proyecto:** `https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1` *(Reemplazar con la URL remota definitiva)*
+* **Repositorio Único del Proyecto:** `https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1`
 
 ---
 
