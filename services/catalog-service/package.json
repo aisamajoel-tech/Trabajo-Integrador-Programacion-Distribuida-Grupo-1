@@ -1,0 +1,30 @@
+{
+  "name": "catalog-service",
+  "version": "1.0.0",
+  "description": "Microservicio de Catálogo Bibliográfico - Programación Distribuida (TP6 - Grupo 1)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "microservice",
+    "catalog",
+    "rest",
+    "mongodb",
+    "docker",
+    "programacion-distribuida"
+  ],
+  "author": "Joel Aisama (@aisamajoel-tech) - Grupo 1",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "mongoose": "^8.12.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}
