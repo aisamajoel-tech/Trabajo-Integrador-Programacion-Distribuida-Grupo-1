@@ -1,0 +1,35 @@
+{
+  "name": "orders-service",
+  "version": "1.0.0",
+  "description": "Microservicio de Órdenes con clientes HTTP resilientes - Programación Distribuida (TP6 - Grupo 1)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test:compra": "node scripts/test-compra.js"
+  },
+  "keywords": [
+    "microservice",
+    "orders",
+    "saga",
+    "rest",
+    "mongodb",
+    "docker",
+    "programacion-distribuida"
+  ],
+  "author": "Grupo 1 - Programación Distribuida",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.3.0",
+    "mongoose": "^8.24.7",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}
