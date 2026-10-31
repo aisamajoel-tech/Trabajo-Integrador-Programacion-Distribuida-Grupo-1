@@ -1,0 +1,36 @@
+{
+  "name": "inventory-service",
+  "version": "1.0.0",
+  "description": "Microservicio de Inventario con lock distribuido en Redis - Programación Distribuida (TP6 - Grupo 1)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js",
+    "test:concurrencia": "node scripts/test-concurrencia.js"
+  },
+  "keywords": [
+    "microservice",
+    "inventory",
+    "redis",
+    "distributed-lock",
+    "mongodb",
+    "docker",
+    "programacion-distribuida"
+  ],
+  "author": "Bautista Navarro (@BautiNavarro) - Grupo 1",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "dotenv": "^16.6.1",
+    "express": "^5.3.0",
+    "mongoose": "^8.24.7",
+    "redis": "^4.7.1",
+    "swagger-jsdoc": "^6.3.0",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.19.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}
