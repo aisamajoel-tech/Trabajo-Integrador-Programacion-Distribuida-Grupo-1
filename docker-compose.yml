@@ -1,0 +1,144 @@
+# ============================================================================
+# Docker Compose — TP6 Programación Distribuida, Grupo 1
+# Levanta: catalog-service, inventory-service, orders-service,
+#          catalog-db, inventory-db, orders-db (MongoDB) y redis.
+# Uso:  cp .env.example .env  &&  docker compose up --build
+# Solo se publican al host los puertos 3001, 3002 y 3003.
+# ============================================================================
+ 
+x-node-healthcheck: &node-healthcheck
+  test: ["CMD", "node", "-e", "fetch('http://localhost:3000/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 15s
+ 
+x-mongo-healthcheck: &mongo-healthcheck
+  test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping')"]
+  interval: 10s
+  timeout: 5s
+  retries: 5
+  start_period: 20s
+ 
+services:
+  # ---------------------------------------------------------------- Catálogo
+  catalog-db:
+    image: mongo:7.0
+    container_name: catalog-db
+    restart: unless-stopped
+    volumes:
+      - catalog_db_data:/data/db
+    networks:
+      - backend
+    healthcheck: *mongo-healthcheck
+ 
+  catalog-service:
+    build: ./services/catalog-service
+    image: grupo1/catalog-service:tp6
+    container_name: catalog-service
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      SERVICE_NAME: catalog-service
+      MONGODB_URI: mongodb://catalog-db:27017/db_catalog
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${CATALOG_HOST_PORT:-3001}:3000"
+    depends_on:
+      catalog-db:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck: *node-healthcheck
+ 
+  # -------------------------------------------------------------- Inventario
+  inventory-db:
+    image: mongo:7.0
+    container_name: inventory-db
+    restart: unless-stopped
+    volumes:
+      - inventory_db_data:/data/db
+    networks:
+      - backend
+    healthcheck: *mongo-healthcheck
+ 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: unless-stopped
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+ 
+  inventory-service:
+    build: ./services/inventory-service
+    image: grupo1/inventory-service:tp6
+    container_name: inventory-service
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      SERVICE_NAME: inventory-service
+      MONGODB_URI: mongodb://inventory-db:27017/db_inventory
+      REDIS_URL: redis://redis:6379
+      LOCK_TTL_MS: ${LOCK_TTL_MS:-5000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${INVENTORY_HOST_PORT:-3002}:3000"
+    depends_on:
+      inventory-db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck: *node-healthcheck
+ 
+  # ------------------------------------------------------------------ Órdenes
+  orders-db:
+    image: mongo:7.0
+    container_name: orders-db
+    restart: unless-stopped
+    volumes:
+      - orders_db_data:/data/db
+    networks:
+      - backend
+    healthcheck: *mongo-healthcheck
+ 
+  orders-service:
+    build: ./services/orders-service
+    image: grupo1/orders-service:tp6
+    container_name: orders-service
+    restart: unless-stopped
+    environment:
+      PORT: 3000
+      SERVICE_NAME: orders-service
+      MONGODB_URI: mongodb://orders-db:27017/db_orders
+      CATALOG_SERVICE_URL: http://catalog-service:3000
+      INVENTORY_SERVICE_URL: http://inventory-service:3000
+      HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS:-3000}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${ORDERS_HOST_PORT:-3003}:3000"
+    depends_on:
+      orders-db:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+      inventory-service:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck: *node-healthcheck
+ 
+networks:
+  backend:
+    driver: bridge
+ 
+volumes:
+  catalog_db_data:
+  inventory_db_data:
+  orders_db_data:
