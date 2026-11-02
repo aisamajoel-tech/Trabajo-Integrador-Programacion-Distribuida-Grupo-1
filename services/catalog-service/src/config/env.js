@@ -4,6 +4,8 @@ const env = {
   SERVICE_NAME: process.env.SERVICE_NAME || 'catalog-service',
   PORT: parseInt(process.env.PORT, 10) || 3001,
   MONGODB_URI: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/db_catalog',
+  JWT_SECRET: process.env.JWT_SECRET || 'dev_jwt_secret_grupo1_cambiar_en_entorno_real_2026',
+  JWT_ISSUER: process.env.JWT_ISSUER || 'auth-service-grupo1',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   DB_RETRY_INTERVAL_MS: parseInt(process.env.DB_RETRY_INTERVAL_MS, 10) || 5000
 };

@@ -7,12 +7,20 @@ const swaggerDefinition = {
   openapi: '3.0.0',
   info: {
     title: 'API de Catálogo Bibliográfico (catalog-service)',
-    version: '1.0.0',
+    version: '1.1.0',
     description:
       'Microservicio responsable de la gestión del catálogo bibliográfico (`db_catalog`). ' +
-      'Administra altas, bajas, modificaciones y consultas de obras literarias sin acoplamiento con el stock ni con Redis.'
+      'Las consultas (`GET /api/libros` y `GET /api/libros/:id`) son públicas; las operaciones de escritura (`POST`, `PUT`, `DELETE`) requieren un token JWT válido con rol `ADMIN`.'
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Ingrese el access token JWT obtenido en POST /api/auth/login (requiere rol ADMIN para escritura)'
+      }
+    },
     schemas: {
       Libro: {
         type: 'object',
@@ -69,7 +77,7 @@ const swaggerDefinition = {
       },
       LibroInput: {
         type: 'object',
-        required: ['titulo', 'autor', 'año', ' isbn'.trim()],
+        required: ['titulo', 'autor', 'año', 'isbn'],
         properties: {
           titulo: {
             type: 'string',
