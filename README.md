@@ -116,6 +116,48 @@ node scripts/seed/seed.js
 
 Carga 5 libros y su stock **a través de las APIs** (nunca toca las bases). Es idempotente. Detalle en [`scripts/seed/README.md`](scripts/seed/README.md).
 
+## ✅ Instalación y verificación de Docker
+
+En Windows se usa Docker Desktop con backend WSL 2. Verificación mínima:
+
+```bash
+wsl --status          # solo Windows
+docker --version
+docker compose version
+docker info
+docker run --rm hello-world
+```
+
+## 🔄 Cambios respecto del TP5
+
+| Cambio | Justificación |
+|---|---|
+| `reset-stock` pasa a `POST /api/inventario/:libroId/reponer` | La reposición es una regla de negocio de inventario y se expresa con una operación explícita. |
+| Se elimina `comprar-inseguro` | Era un endpoint de demostración de la condición de carrera del monolito; ya no tiene sentido. |
+| La compra se orquesta en `orders-service` (`POST /api/ordenes`) | `orders` consulta a `catalog` y delega el descuento en `inventory`, sin acceder a sus bases. |
+| Nuevo `POST /api/inventario/:libroId/revertir` y uso de `ordenId` | Permite descuentos idempotentes y compensar un descuento incierto (ver análisis de fallo parcial). |
+| El lock distribuido (Redis) queda en `inventory-service` | Es el único servicio que modifica el stock. |
+
+Detalle de la ratificación: `docs/tp6/ratificacion-arquitectura.md`.
+
+## 🔀 Ejecución local vs. Docker Compose
+
+El código es el mismo; solo cambian las variables de entorno.
+
+| Variable | Local (`.env` de cada servicio) | Docker Compose |
+|---|---|---|
+| `PORT` | `3001` / `3002` / `3003` | `3000` (publicado `3001`/`3002`/`3003`) |
+| `MONGODB_URI` | `mongodb://127.0.0.1:27017/db_<nombre>` | `mongodb://<servicio>-db:27017/db_<nombre>` |
+| `REDIS_URL` (inventory) | `redis://127.0.0.1:6379` | `redis://redis:6379` |
+| `CATALOG_SERVICE_URL` (orders) | `http://localhost:3001` | `http://catalog-service:3000` |
+| `INVENTORY_SERVICE_URL` (orders) | `http://localhost:3002` | `http://inventory-service:3000` |
+
+## 🚦 Inicio y disponibilidad de dependencias
+
+* Cada MongoDB tiene healthcheck (`mongosh ping`), Redis (`redis-cli ping`) y cada servicio Node (`fetch /health`).
+* `depends_on` con `condition: service_healthy`: los servicios esperan a su base y a Redis, y `orders-service` espera a `catalog-service` e `inventory-service`.
+* Además, la aplicación no asume disponibilidad: `orders-service` reintenta la conexión a su base, `inventory-service` se reconecta solo a Redis (responde `503 REDIS_NO_DISPONIBLE` mientras tanto) y `orders-service` responde `503 SERVICIO_NO_DISPONIBLE` si catalog o inventory no responden.
+
 ## 🧪 Pruebas
 
 | Prueba | Comando |
