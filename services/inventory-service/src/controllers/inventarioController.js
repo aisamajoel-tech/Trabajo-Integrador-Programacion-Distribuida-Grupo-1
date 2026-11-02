@@ -109,8 +109,9 @@ async function descontarStock(req, res, next) {
     return responderError(res, 400, 'VALIDACION_FALLIDA', 'ordenId, si se envía, debe ser un texto no vacío.');
   }
 
-  // clienteId del body (contrato) o del header x-client-id (compatibilidad con el monolito)
-  const cliente = clienteId || req.headers['x-client-id'];
+  // clienteId del body (contrato), del header x-client-id (compatibilidad con el monolito)
+  // o, en su defecto, el usuario autenticado del JWT (claim `sub`, TP7)
+  const cliente = clienteId || req.headers['x-client-id'] || req.user?.sub;
 
   try {
     const resultado = await inventarioService.descontarStock(

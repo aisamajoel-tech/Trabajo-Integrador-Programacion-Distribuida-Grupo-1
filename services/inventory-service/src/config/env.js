@@ -19,6 +19,10 @@ const env = {
   LOCK_REINTENTOS: entero(process.env.LOCK_REINTENTOS, 3),
   LOCK_ESPERA_MS: entero(process.env.LOCK_ESPERA_MS, 50),
   ARTIFICIAL_DELAY_MS: entero(process.env.ARTIFICIAL_DELAY_MS, 0),
+  // TP7: validación local (stateless) del JWT emitido por auth-service.
+  // El secreto llega por variable de entorno; el valor por defecto es solo para desarrollo.
+  JWT_SECRET: process.env.JWT_SECRET || 'dev_jwt_secret_grupo1_cambiar_en_entorno_real_2026',
+  JWT_ISSUER: process.env.JWT_ISSUER || 'auth-service-grupo1',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   DB_RETRY_INTERVAL_MS: entero(process.env.DB_RETRY_INTERVAL_MS, 5000),
   // Opcional: si está definida, el alta de stock verifica que el libro exista en el catálogo.

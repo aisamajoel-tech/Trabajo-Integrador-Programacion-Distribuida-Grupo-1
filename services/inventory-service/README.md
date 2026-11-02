@@ -9,16 +9,16 @@ Microservicio de **inventario** del TP6 (Grupo 1). Custodia cuántas unidades ha
 
 ## Endpoints
 
-| Método | Ruta | Qué hace | Respuestas |
-|---|---|---|---|
-| `POST` | `/api/inventario` | Crea el registro de stock de un libro. Body `{ libroId, stockInicial }` | `201` · `400` · `409 STOCK_YA_EXISTE` · `422 LIBRO_INEXISTENTE` · `503` |
-| `GET` | `/api/inventario/:libroId` | Consulta la disponibilidad | `200` · `400` · `404 STOCK_NO_ENCONTRADO` · `503` |
-| `POST` | `/api/inventario/:libroId/descontar` | Descuenta con lock. Body `{ cantidad, clienteId }` (+ `ordenId` opcional) | `200` · `400 STOCK_INSUFICIENTE` · `404` · `409 LOCK_OCUPADO` · `503 REDIS_NO_DISPONIBLE` |
-| `POST` | `/api/inventario/:libroId/reponer` | Reposición (reemplaza al `reset-stock` del monolito). `{ cantidad }` suma; `{ stock }` fija el saldo | `200` · `400` · `404` · `409` · `503` |
-| `POST` | `/api/inventario/:libroId/revertir` | Compensación: devuelve las unidades de un `ordenId` que sí descontó. Body `{ ordenId }` | `200` (`revertido: true/false`) · `400` · `404` · `503` |
-| `GET` | `/api/inventario/:libroId/lock-status` | Diagnóstico: si hay lock activo y su TTL | `200` · `400` · `503` |
-| `GET` | `/health` | Salud del servicio y estado de MongoDB y Redis | `200` |
-| `GET` | `/api-docs` | Swagger UI | `200` |
+| Método | Ruta | Acceso (TP7) | Qué hace | Respuestas |
+|---|---|---|---|---|
+| `POST` | `/api/inventario` | Solo `ADMIN` | Crea el registro de stock de un libro. Body `{ libroId, stockInicial }` | `201` · `400` · `409 STOCK_YA_EXISTE` · `422 LIBRO_INEXISTENTE` · `503` |
+| `GET` | `/api/inventario/:libroId` | Público | Consulta la disponibilidad | `200` · `400` · `404 STOCK_NO_ENCONTRADO` · `503` |
+| `POST` | `/api/inventario/:libroId/descontar` | `USER` o `ADMIN` | Descuenta con lock. Body `{ cantidad, clienteId }` (+ `ordenId` opcional) | `200` · `400 STOCK_INSUFICIENTE` · `404` · `409 LOCK_OCUPADO` · `503 REDIS_NO_DISPONIBLE` |
+| `POST` | `/api/inventario/:libroId/reponer` | Solo `ADMIN` | Reposición (reemplaza al `reset-stock` del monolito). `{ cantidad }` suma; `{ stock }` fija el saldo | `200` · `400` · `404` · `409` · `503` |
+| `POST` | `/api/inventario/:libroId/revertir` | `USER` o `ADMIN` | Compensación: devuelve las unidades de un `ordenId` que sí descontó. Body `{ ordenId }` | `200` (`revertido: true/false`) · `400` · `404` · `503` |
+| `GET` | `/api/inventario/:libroId/lock-status` | Público | Diagnóstico: si hay lock activo y su TTL | `200` · `400` · `503` |
+| `GET` | `/health` | Público | Salud del servicio y estado de MongoDB y Redis | `200` |
+| `GET` | `/api-docs` | Público | Swagger UI | `200` |
 
 Errores siempre con el formato acordado: `{ "error": "mensaje", "codigo": "CODIGO" }`.
 
@@ -32,6 +32,23 @@ curl -X POST http://localhost:3002/api/inventario/6712e8f0c3b2a9e4d1f00001/desco
 
 ```json
 { "libroId": "6712e8f0c3b2a9e4d1f00001", "stockPrevio": 5, "cantidadDescontada": 1, "stockRestante": 4, "clienteId": "cliente-123" }
+```
+
+Las rutas protegidas responden además `401` (token ausente, mal formado, inválido o vencido) y `403 PERMISOS_INSUFICIENTES` (rol no permitido).
+
+## Seguridad (TP7)
+
+- El token lo emite `auth-service` (`POST /api/auth/login`). inventory-service **no** consulta a auth-service ni a `db_auth`: valida el JWT de forma local (stateless) con `JWT_SECRET`, algoritmo `HS256` y emisor `JWT_ISSUER`.
+- Middleware en `src/middlewares/authMiddleware.js` (mismo que catalog-service): `autenticarJWT` deja el usuario en `req.user` (`sub`, `email`, `role`) y `requerirRol(...)` aplica el control por rol.
+- Alta y reposición de stock: solo `ADMIN`. Descontar y revertir: `USER` o `ADMIN` (orders-service propaga el `Authorization: Bearer <JWT>` del cliente). Consultas y diagnóstico: públicos.
+- Si en `/descontar` no se envía `clienteId`, se toma el `sub` del token.
+
+```bash
+# Login como ADMIN y reposición de stock
+TOKEN=$(curl -s -X POST http://localhost:3004/api/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"admin@libreria.com","password":"Admin1234!"}' | node -pe "JSON.parse(require('fs').readFileSync(0)).accessToken")
+curl -X POST http://localhost:3002/api/inventario/<libroId>/reponer \
+  -H "Authorization: Bearer $TOKEN" -H "Content-Type: application/json" -d '{"cantidad":5}'
 ```
 
 ## Cómo funciona el lock
@@ -57,6 +74,8 @@ Ver [`.env.example`](.env.example). Mismos nombres que el resto de los servicios
 | `LOCK_TTL_MS` | `5000` | `5000` |
 | `LOG_LEVEL` | `info` | `info` |
 | `CATALOG_SERVICE_URL` *(opcional)* | `http://localhost:3001` | `http://catalog-service:3000` |
+| `JWT_SECRET` | igual al de auth-service | igual al de auth-service |
+| `JWT_ISSUER` | `auth-service-grupo1` | `auth-service-grupo1` |
 
 `REDIS_URL` reemplaza a `REDIS_HOST` + `REDIS_PORT` del monolito. Si `CATALOG_SERVICE_URL` está definida, el alta de stock verifica por HTTP que el libro exista en el catálogo; si no, la verificación se omite.
 
@@ -95,7 +114,7 @@ npm run test:concurrencia
 INVENTORY_SERVICE_URL=http://localhost:3002 COMPRADORES=20 STOCK_INICIAL=5 npm run test:concurrencia
 ```
 
-Hace dos pruebas: (1) dos clientes compran el último ejemplar a la vez y (2) `COMPRADORES` compras simultáneas sobre `STOCK_INICIAL` unidades. Verifica que nunca se acepten más compras que unidades y que el stock final cuadre. Sale con código `1` si detecta sobreventa.
+Inicia sesión en auth-service como `ADMIN` (alta y reposición) y como `USER` (descontar); si auth-service no responde, firma tokens locales con `JWT_SECRET`. Primero verifica la seguridad (sin token → `401`, token inválido → `401`, `USER` reponiendo → `403`, `GET` público → `200`) y después hace dos pruebas: (1) dos clientes compran el último ejemplar a la vez y (2) `COMPRADORES` compras simultáneas sobre `STOCK_INICIAL` unidades. Verifica que nunca se acepten más compras que unidades y que el stock final cuadre. Sale con código `1` si detecta sobreventa.
 
 ## Estructura
 
@@ -107,6 +126,7 @@ inventory-service/
 │   ├── services/inventarioService.js     # reglas de negocio de stock
 │   ├── services/lockService.js           # lock distribuido (SET NX PX + Lua)
 │   ├── clients/catalogClient.js          # verificación opcional contra catalog-service
+│   ├── middlewares/authMiddleware.js     # JWT (autenticarJWT) y RBAC (requerirRol)
 │   ├── models/Stock.js · Movimiento.js   # modelos propios de db_inventory
 │   ├── config/                           # env, db, redis, logger, swagger
 │   └── app.js
