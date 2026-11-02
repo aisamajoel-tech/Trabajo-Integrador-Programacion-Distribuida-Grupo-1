@@ -1,9 +1,11 @@
 # ============================================================================
-# Docker Compose — TP6 Programación Distribuida, Grupo 1
-# Levanta: catalog-service, inventory-service, orders-service,
-#          catalog-db, inventory-db, orders-db (MongoDB) y redis.
+# Docker Compose — TP6/TP7 Programación Distribuida, Grupo 1
+# Levanta: auth-service, catalog-service, inventory-service, orders-service,
+#          auth-db, catalog-db, inventory-db, orders-db (MongoDB) y redis.
 # Uso:  cp .env.example .env  &&  docker compose up --build
-# Solo se publican al host los puertos 3001, 3002 y 3003.
+# Solo se publican al host los puertos 3001, 3002, 3003 y 3004.
+# TP7: todos los servicios comparten JWT_SECRET y JWT_ISSUER por variable de entorno
+#      (auth-service firma los tokens; el resto los valida de forma local).
 # ============================================================================
  
 x-node-healthcheck: &node-healthcheck
@@ -20,7 +22,48 @@ x-mongo-healthcheck: &mongo-healthcheck
   retries: 5
   start_period: 20s
  
+# Variables de seguridad comunes (TP7). Los valores reales se definen en .env, nunca en el código.
+x-jwt-env: &jwt-env
+  JWT_SECRET: ${JWT_SECRET:-dev_jwt_secret_grupo1_cambiar_en_entorno_real_2026}
+  JWT_ISSUER: ${JWT_ISSUER:-auth-service-grupo1}
+
 services:
+  # ------------------------------------------------------------ Autenticación
+  auth-db:
+    image: mongo:7.0
+    container_name: auth-db
+    restart: unless-stopped
+    volumes:
+      - auth_db_data:/data/db
+    networks:
+      - backend
+    healthcheck: *mongo-healthcheck
+
+  auth-service:
+    build: ./services/auth-service
+    image: grupo1/auth-service:tp7
+    container_name: auth-service
+    restart: unless-stopped
+    environment:
+      <<: *jwt-env
+      PORT: 3000
+      SERVICE_NAME: auth-service
+      MONGODB_URI: mongodb://auth-db:27017/db_auth
+      JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-1h}
+      BCRYPT_ROUNDS: ${BCRYPT_ROUNDS:-10}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@libreria.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-Admin1234!}
+      ADMIN_NOMBRE: ${ADMIN_NOMBRE:-Administrador Librería}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    ports:
+      - "${AUTH_HOST_PORT:-3004}:3000"
+    depends_on:
+      auth-db:
+        condition: service_healthy
+    networks:
+      - backend
+    healthcheck: *node-healthcheck
+
   # ---------------------------------------------------------------- Catálogo
   catalog-db:
     image: mongo:7.0
@@ -38,6 +81,7 @@ services:
     container_name: catalog-service
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       PORT: 3000
       SERVICE_NAME: catalog-service
       MONGODB_URI: mongodb://catalog-db:27017/db_catalog
@@ -80,6 +124,7 @@ services:
     container_name: inventory-service
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       PORT: 3000
       SERVICE_NAME: inventory-service
       MONGODB_URI: mongodb://inventory-db:27017/db_inventory
@@ -114,11 +159,13 @@ services:
     container_name: orders-service
     restart: unless-stopped
     environment:
+      <<: *jwt-env
       PORT: 3000
       SERVICE_NAME: orders-service
       MONGODB_URI: mongodb://orders-db:27017/db_orders
       CATALOG_SERVICE_URL: http://catalog-service:3000
       INVENTORY_SERVICE_URL: http://inventory-service:3000
+      AUTH_SERVICE_URL: http://auth-service:3000
       HTTP_TIMEOUT_MS: ${HTTP_TIMEOUT_MS:-3000}
       LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
@@ -139,6 +186,7 @@ networks:
     driver: bridge
  
 volumes:
+  auth_db_data:
   catalog_db_data:
   inventory_db_data:
   orders_db_data:
