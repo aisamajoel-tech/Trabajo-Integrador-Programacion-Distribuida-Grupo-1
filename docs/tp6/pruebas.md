@@ -19,18 +19,17 @@ node scripts/seed/seed.js
 | 3 | Arranque con Compose y healthchecks | `docker compose up --build -d` · `docker compose ps` | 7 contenedores `Up (healthy)`; solo 3001, 3002 y 3003 publicados | Delfina | [docker-delfina1](evidencias/docker-delfina1.png) · [docker-delfina2](evidencias/docker-delfina2.png) · [docker-delfina3](evidencias/docker-delfina3.png) |
 | 4 | Health de cada servicio | `curl.exe http://localhost:300X/health` | `200 {"service":"...","status":"ok"}` | Joel / Bautista / Candela | Ver evidencias de la fila 2 |
 | 5 | Datos de prueba reproducibles | `node scripts/seed/seed.js` | 5 libros y su stock creados vía API; repetirlo no duplica | Joel | [evidencia-catalog-joel](evidencias/evidencia-catalog-joel.md) |
-| 6 | **CRUD / negocio** | Ver sección 1 | Alta, listado, consulta, edición y stock funcionan tras la migración | Carolina | [crud-carolina.png](evidencias/crud-carolina.png) |
-| 7 | **Comunicación entre servicios** | Ver sección 2 | `201 CONFIRMADA`; el mismo `requestId` aparece en los logs de orders, catalog e inventory | Carolina | [comunicacion-carolina.png](evidencias/comunicacion-carolina.png) · [test-compra-orders.png](evidencias/test-compra-orders.png) |
+| 6 | **CRUD / negocio** | Ver sección 1 | Alta, listado, consulta, edición y stock funcionan tras la migración | Carolina | [crud-1](evidencias/crud-carolina-1.png) · [crud-2](evidencias/crud-carolina-2.png) · [crud-3](evidencias/crud-carolina-3.png) |
+| 7 | **Comunicación entre servicios** | Ver sección 2 | `201 CONFIRMADA`; el mismo `requestId` aparece en los logs de orders, catalog e inventory | Carolina | [comunicacion-1](evidencias/comunicacion-carolina-1.png) · [comunicacion-2](evidencias/comunicacion-carolina-2.png) · [comunicacion-3](evidencias/comunicacion-carolina-3.png) · [test-compra-orders](evidencias/test-compra-orders.png) |
 | 8 | **Propiedad de datos** | Ver sección 3 | Cada servicio ve solo su base (`db_catalog`, `db_inventory`, `db_orders`) | Carolina | [propiedad-datos-carolina.png](evidencias/propiedad-datos-carolina.png) |
 | 9 | Concurrencia sin sobreventa | `cd services/inventory-service && npm run test:concurrencia` | Nunca se descuenta más stock del disponible | Bautista | [evidencia-inventory-bautista](evidencias/evidencia-inventory-bautista.md) · [captura](evidencias/test-concurrencia-bautista.png) |
 | 10 | Compras simultáneas vía orders | `cd services/orders-service && npm run test:compra` | Órdenes `CONFIRMADAS` = unidades de stock; stock final coherente | Candela / Bautista | [evidencia-orders](evidencias/evidencia-orders.md) · [captura](evidencias/test-compra-orders.png) |
 | 11 | Indisponibilidad de un servicio | `docker compose stop inventory-service` → comprar → `docker compose start inventory-service` | Compra `503`, orders sigue vivo (`/health` 200); al volver, compra `201` | Candela | [evidencia-orders (sec. 4)](evidencias/evidencia-orders.md) · [1](evidencias/indisponibilidad-orders-1.png) · [2](evidencias/indisponibilidad-orders-2.png) · [3](evidencias/indisponibilidad-orders-3.png) |
 | 12 | Configuración por entorno (local vs Docker) | Mismo código con `.env` local y con Compose | Solo cambian variables de entorno | Bautista | [evidencia-inventory-bautista (sec. 6)](evidencias/evidencia-inventory-bautista.md) |
-| 13 | Persistencia de datos | crear dato → `docker compose down` → `docker compose up -d` → consultar | El dato sigue; con `down -v` se pierde | Delfina | [evidencias de Delfina](evidencias/) |
-| 14 | Logs | `docker compose logs <servicio>` | Muestran servicio, nivel, endpoint y errores | Delfina | [evidencias de Delfina](evidencias/) |
+| 13 | Persistencia de datos | crear dato → `docker compose down` → `docker compose up -d` → consultar | El dato sigue; con `down -v` se pierde | Delfina | [docker-delfina1](evidencias/docker-delfina1.png) · [docker-delfina2](evidencias/docker-delfina2.png) · [docker-delfina3](evidencias/docker-delfina3.png) |
+| 14 | Logs | `docker compose logs <servicio>` | Muestran servicio, nivel, endpoint y errores | Delfina | [docker-delfina3](evidencias/docker-delfina3.png) · [comunicacion-3](evidencias/comunicacion-carolina-3.png) |
 | 15 | Fallo parcial (análisis) | — (documental) | Análisis del caso de compra | Carolina | [analisis-fallo-parcial.md](analisis-fallo-parcial.md) |
-
-> Revisar que esta tabla cubra todas las pruebas obligatorias de la sección 18 de la consigna y agregar las filas que falten.
+| 16 | Documentación OpenAPI / Swagger | `http://localhost:3001/api-docs` · `3002/api-docs` · `3003/api-docs` | Cada servicio expone su interfaz documentada y sin campos ajenos | Joel / Bautista / Candela | [catalog](evidencias/evidencia-catalog-joel.md) · [inventory](evidencias/evidencia-inventory-bautista.md) · [orders](evidencias/evidencia-orders.md) |
 
 ---
 
@@ -59,7 +58,7 @@ Invoke-RestMethod http://localhost:3002/api/inventario/$($libro.id)
 | `POST /api/inventario` | Stock creado para el `libroId` | ✅ `stockDisponible: 3` (`verificacionCatalogo: OMITIDA`) |
 | `GET /api/inventario/:libroId` | Stock del libro | ✅ `stockDisponible: 3` |
 
-Las operaciones principales siguen funcionando tras separar el monolito en servicios. Captura: [crud-carolina.png](evidencias/crud-carolina.png)
+Las operaciones principales siguen funcionando tras separar el monolito en servicios. Capturas: [crud-carolina-1.png](evidencias/crud-carolina-1.png) · [crud-carolina-2.png](evidencias/crud-carolina-2.png) · [crud-carolina-3.png](evidencias/crud-carolina-3.png)
 
 ## 2. Comunicación entre servicios
 
@@ -92,7 +91,7 @@ Recorrido de la operación (`requestId: prueba-caro-001`) según los logs:
 3. `inventory-service`: *Lock adquirido* → *Descuento aplicado. Stock restante: 2* → *Lock liberado* → `POST /api/inventario/:libroId/descontar` `200`.
 4. `orders-service`: *Orden CONFIRMADA* → `POST /api/ordenes` `201`.
 
-Captura: [comunicacion-carolina.png](evidencias/comunicacion-carolina-1.png)
+Capturas: [comunicacion-carolina-1.png](evidencias/comunicacion-carolina-1.png) · [comunicacion-carolina-2.png](evidencias/comunicacion-carolina-2.png) · [comunicacion-carolina-3.png](evidencias/comunicacion-carolina-3.png)
 
 > Nota: la primera compra intentada falló con `400 VALIDACION_FALLIDA` porque se envió sin el header `Content-Type: application/json`. Es el comportamiento esperado de la validación de orders (rechaza el body vacío sin crear la orden) y se corrigió enviando el header.
 
