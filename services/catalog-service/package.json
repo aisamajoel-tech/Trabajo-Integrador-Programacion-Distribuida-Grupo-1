@@ -1,7 +1,7 @@
 {
   "name": "catalog-service",
-  "version": "1.0.0",
-  "description": "Microservicio de Catálogo Bibliográfico - Programación Distribuida (TP6 - Grupo 1)",
+  "version": "1.1.0",
+  "description": "Microservicio de Catálogo Bibliográfico con Autenticación JWT y RBAC - Programación Distribuida (TP6/TP7 - Grupo 1)",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",
@@ -10,6 +10,8 @@
   "keywords": [
     "microservice",
     "catalog",
+    "jwt",
+    "rbac",
     "rest",
     "mongodb",
     "docker",
@@ -21,6 +23,7 @@
   "dependencies": {
     "dotenv": "^16.4.7",
     "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.12.1",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",

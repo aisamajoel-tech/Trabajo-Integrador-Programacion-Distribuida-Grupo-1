@@ -1,18 +1,30 @@
 /**
- * Script reproducible de inicialización de datos de prueba (TP6 - Grupo 1)
- * Responsable: Joel Aisama (@aisamajoel-tech)
+ * Script reproducible de inicialización de datos de prueba (TP6 / TP7 - Grupo 1)
+ * Responsable: Joel Aisama (@aisamajoel-tech) — Issues #11 y #26
  *
- * Regla arquitectónica:
- * Nunca accede directamente a las bases de datos. Crea las obras a través de la API pública
- * de catalog-service (POST /api/libros) y luego inicializa sus existencias mediante la API
- * pública de inventory-service (POST /api/inventario).
+ * Regla arquitectónica y de seguridad (TP7):
+ * 1. Nunca accede directamente a las bases de datos (`db_auth`, `db_catalog`, `db_inventory`).
+ * 2. Se autentica contra `auth-service` (`POST /api/auth/login`) con el usuario `ADMIN` inicial
+ *    (`admin@libreria.com`) y registra/autentica un usuario `USER` de prueba (`cliente@libreria.com`).
+ *    (Si `auth-service` aún no está levantado en una prueba parcial, firma un token temporal compatible con `JWT_SECRET`).
+ * 3. Crea las 5 obras en `catalog-service` (`POST /api/libros`) e inicializa su stock en
+ *    `inventory-service` (`POST /api/inventario`) enviando `Authorization: Bearer <token_admin>`.
  */
 
 const crypto = require('crypto');
 
+const AUTH_SERVICE_URL = (process.env.AUTH_SERVICE_URL || 'http://localhost:3004').replace(/\/$/, '');
 const CATALOG_SERVICE_URL = (process.env.CATALOG_SERVICE_URL || 'http://localhost:3001').replace(/\/$/, '');
 const INVENTORY_SERVICE_URL = (process.env.INVENTORY_SERVICE_URL || 'http://localhost:3002').replace(/\/$/, '');
 const HTTP_TIMEOUT_MS = parseInt(process.env.HTTP_TIMEOUT_MS, 10) || 5000;
+
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@libreria.com';
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin1234!';
+const USER_EMAIL = process.env.USER_EMAIL || 'cliente@libreria.com';
+const USER_PASSWORD = process.env.USER_PASSWORD || 'Cliente123!';
+
+const JWT_SECRET = process.env.JWT_SECRET || 'dev_jwt_secret_grupo1_cambiar_en_entorno_real_2026';
+const JWT_ISSUER = process.env.JWT_ISSUER || 'auth-service-grupo1';
 
 const LIBROS_SEMILLA = [
   {
@@ -57,7 +69,66 @@ const LIBROS_SEMILLA = [
   }
 ];
 
-async function crearLibroEnCatalogo(libro, requestId) {
+function generarJwtFallbackAdmin() {
+  const b64url = (obj) => Buffer.from(JSON.stringify(obj)).toString('base64url');
+  const ahora = Math.floor(Date.now() / 1000);
+  const header = b64url({ alg: 'HS256', typ: 'JWT' });
+  const payload = b64url({
+    sub: '000000000000000000000001',
+    email: ADMIN_EMAIL,
+    role: 'ADMIN',
+    iss: JWT_ISSUER,
+    iat: ahora,
+    exp: ahora + 3600
+  });
+  const firma = crypto.createHmac('sha256', JWT_SECRET).update(`${header}.${payload}`).digest('base64url');
+  return `${header}.${payload}.${firma}`;
+}
+
+async function prepararUsuariosYObtenerTokenAdmin() {
+  try {
+    // 1. Login del usuario ADMIN inicial (creado por bootstrap en auth-service)
+    const resLoginAdmin = await fetch(`${AUTH_SERVICE_URL}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: ADMIN_EMAIL, password: ADMIN_PASSWORD }),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
+    });
+
+    let adminToken = null;
+    if (resLoginAdmin.ok) {
+      const dataAdmin = await resLoginAdmin.json();
+      adminToken = dataAdmin.accessToken;
+      console.log(`  [Auth] 200 Login ADMIN exitoso -> ${ADMIN_EMAIL} (rol: ${dataAdmin.usuario?.role || 'ADMIN'})`);
+    }
+
+    // 2. Asegurar usuario de prueba con rol USER (idempotente)
+    const resRegUser = await fetch(`${AUTH_SERVICE_URL}/api/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        email: USER_EMAIL,
+        password: USER_PASSWORD,
+        nombre: 'Cliente Demo TP7'
+      }),
+      signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
+    });
+
+    if (resRegUser.status === 201) {
+      console.log(`  [Auth] 201 Usuario USER registrado -> ${USER_EMAIL}`);
+    } else if (resRegUser.status === 409) {
+      console.log(`  [Auth] 409 Usuario USER ya existente -> ${USER_EMAIL}`);
+    }
+
+    if (adminToken) return adminToken;
+  } catch (err) {
+    console.warn(`  [Auth] auth-service no disponible en ${AUTH_SERVICE_URL} (${err.message}). Usando token ADMIN local de respaldo.`);
+  }
+
+  return generarJwtFallbackAdmin();
+}
+
+async function crearLibroEnCatalogo(libro, requestId, adminToken) {
   const { titulo, autor, año, genero, isbn } = libro;
   const url = `${CATALOG_SERVICE_URL}/api/libros`;
 
@@ -65,6 +136,7 @@ async function crearLibroEnCatalogo(libro, requestId) {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
+      Authorization: `Bearer ${adminToken}`,
       'x-request-id': requestId
     },
     body: JSON.stringify({ titulo, autor, año, genero, isbn }),
@@ -79,7 +151,6 @@ async function crearLibroEnCatalogo(libro, requestId) {
   }
 
   if (res.status === 409) {
-    // Si ya existía por ISBN, consultamos el listado para recuperar su ID de forma idempotente
     const listRes = await fetch(url, {
       headers: { 'x-request-id': requestId },
       signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
@@ -99,16 +170,18 @@ async function crearLibroEnCatalogo(libro, requestId) {
   throw new Error(`Fallo en catalog-service (${res.status}): ${detalle}`);
 }
 
-async function inicializarStockEnInventario(libroId, stockInicial, titulo, requestId) {
+async function inicializarStockEnInventario(libroId, stockInicial, titulo, requestId, adminToken) {
   const urlAlta = `${INVENTORY_SERVICE_URL}/api/inventario`;
+  const headers = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${adminToken}`,
+    'x-request-id': requestId
+  };
 
   try {
     const res = await fetch(urlAlta, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-request-id': requestId
-      },
+      headers,
       body: JSON.stringify({
         libroId,
         stockInicial,
@@ -122,14 +195,10 @@ async function inicializarStockEnInventario(libroId, stockInicial, titulo, reque
       return true;
     }
 
-    // Si ya tenía registro de stock, intentamos reponer/actualizar mediante /reponer
     const urlReponer = `${INVENTORY_SERVICE_URL}/api/inventario/${libroId}/reponer`;
     const resReponer = await fetch(urlReponer, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-request-id': requestId
-      },
+      headers,
       body: JSON.stringify({
         cantidad: stockInicial,
         stock: stockInicial
@@ -153,10 +222,15 @@ async function inicializarStockEnInventario(libroId, stockInicial, titulo, reque
 
 async function ejecutarSeed() {
   console.log('===================================================================');
-  console.log('🌱 INICIANDO CARGA DE DATOS DE PRUEBA (SEED) — TP6 GRUPO 1');
+  console.log('🌱 INICIANDO CARGA DE DATOS DE PRUEBA (SEED) — TP6/TP7 GRUPO 1');
+  console.log(`🔐 Auth Service URL:      ${AUTH_SERVICE_URL}`);
   console.log(`📚 Catalog Service URL:   ${CATALOG_SERVICE_URL}`);
   console.log(`📦 Inventory Service URL: ${INVENTORY_SERVICE_URL}`);
   console.log('===================================================================\n');
+
+  console.log('▶ Preparando identidades de prueba (ADMIN y USER)...');
+  const adminToken = await prepararUsuariosYObtenerTokenAdmin();
+  console.log('');
 
   const resultados = [];
 
@@ -165,8 +239,8 @@ async function ejecutarSeed() {
     console.log(`▶ Procesando obra: "${item.titulo}" (${item.isbn})`);
 
     try {
-      const libroId = await crearLibroEnCatalogo(item, requestId);
-      const stockOk = await inicializarStockEnInventario(libroId, item.stockInicial, item.titulo, requestId);
+      const libroId = await crearLibroEnCatalogo(item, requestId, adminToken);
+      const stockOk = await inicializarStockEnInventario(libroId, item.stockInicial, item.titulo, requestId, adminToken);
       resultados.push({
         titulo: item.titulo,
         isbn: item.isbn,

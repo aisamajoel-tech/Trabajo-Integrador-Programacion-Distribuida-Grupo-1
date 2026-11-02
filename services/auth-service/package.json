@@ -1,0 +1,37 @@
+{
+  "name": "auth-service",
+  "version": "1.0.0",
+  "description": "Microservicio de Identidad, Autenticación (bcrypt) y Emisión de JWT - Programación Distribuida (TP7 - Grupo 1)",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [
+    "microservice",
+    "auth",
+    "jwt",
+    "bcrypt",
+    "rbac",
+    "mongodb",
+    "docker",
+    "programacion-distribuida"
+  ],
+  "author": "Joel Aisama (@aisamajoel-tech) - Grupo 1",
+  "license": "ISC",
+  "type": "commonjs",
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "dotenv": "^16.4.7",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.12.1",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1",
+    "winston": "^3.17.0",
+    "winston-daily-rotate-file": "^5.0.0"
+  }
+}
