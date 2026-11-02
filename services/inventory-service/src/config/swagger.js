@@ -12,9 +12,20 @@ const swaggerDefinition = {
     version: '1.0.0',
     description:
       'Microservicio responsable de las existencias de cada libro (`db_inventory`) y de evitar la sobreventa ' +
-      'con un lock distribuido en Redis/Memurai. Trabaja solo con `libroId`: no guarda datos bibliográficos.'
+      'con un lock distribuido en Redis/Memurai. Trabaja solo con `libroId`: no guarda datos bibliográficos. ' +
+      'Las operaciones de escritura requieren un JWT emitido por auth-service (TP7).'
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description:
+          'Access token obtenido en POST /api/auth/login de auth-service. ' +
+          'Alta y reposición requieren rol ADMIN; descontar y revertir, USER o ADMIN.'
+      }
+    },
     parameters: {
       LibroId: {
         in: 'path',
@@ -117,6 +128,14 @@ const swaggerDefinition = {
       },
       SinStock: {
         description: 'No existe registro de stock para el libro (STOCK_NO_ENCONTRADO).',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+      },
+      NoAutenticado: {
+        description: 'Token ausente, mal formado, con firma inválida o vencido (TOKEN_NO_PROPORCIONADO / TOKEN_MAL_FORMADO / TOKEN_INVALIDO / TOKEN_VENCIDO).',
+        content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
+      },
+      SinPermiso: {
+        description: 'Token válido pero con un rol que no tiene permiso para esta operación (PERMISOS_INSUFICIENTES).',
         content: { 'application/json': { schema: { $ref: '#/components/schemas/ErrorResponse' } } }
       },
       NoDisponible: {
