@@ -1,21 +1,59 @@
 # orders-service
 
-Microservicio de **órdenes de compra** del TP6 (Grupo 1). Orquesta la compra: recibe el pedido del cliente, le pregunta a `catalog-service` si el libro existe, le pide a `inventory-service` que descuente el stock y deja registrada cada orden con su resultado.
+Microservicio de **órdenes de compra** del TP6/TP7 (Grupo 1). Orquesta la compra: recibe el pedido del cliente, le pregunta a `catalog-service` si el libro existe, le pide a `inventory-service` que descuente el stock y deja registrada cada orden con su resultado.
 
 - **Issue:** #13 · Spec: [`docs/servicios/orders-service.md`](../../docs/servicios/orders-service.md)
 - **Base de datos propia:** MongoDB `db_orders` (colección `ordenes`)
 - **Depende de:** `catalog-service` (`GET /api/libros/:id`) e `inventory-service` (`POST /api/inventario/:libroId/descontar` y `/revertir`), siempre por HTTP
 - **No** lee ni escribe stock, no usa Redis ni locks y no accede a `db_catalog` ni a `db_inventory`.
+- **TP7 (Issue #28):** todos los endpoints de `/api/ordenes` exigen JWT, se aplica la regla de **propiedad del recurso** y el token se **propaga** a `inventory-service`.
 
 ## Endpoints
 
-| Método | Ruta | Qué hace | Respuestas |
-|---|---|---|---|
-| `POST` | `/api/ordenes` | Crea la orden y orquesta la compra. Body `{ clienteId, libroId, cantidad }` | `201` CONFIRMADA · `400` body inválido · `404` LIBRO_INEXISTENTE · `409` SIN_STOCK / CONCURRENCIA · `503` SERVICIO_NO_DISPONIBLE |
-| `GET` | `/api/ordenes/:id` | Consulta una orden | `200` · `400` · `404` |
-| `GET` | `/api/ordenes/cliente/:clienteId?estado=` | Historial del cliente, más reciente primero | `200` (`[]` si no tiene órdenes) · `400` |
-| `GET` | `/health` | Salud del servicio | `200` |
-| `GET` | `/api-docs` | Swagger UI | `200` |
+| Método | Ruta | Acceso | Qué hace | Respuestas |
+|---|---|---|---|---|
+| `POST` | `/api/ordenes` | JWT `USER` o `ADMIN` | Crea la orden y orquesta la compra. Body `{ libroId, cantidad, clienteId? }` | `201` CONFIRMADA · `400` body inválido · `401` token · `403` compra a nombre de otro · `404` LIBRO_INEXISTENTE · `409` SIN_STOCK / CONCURRENCIA · `503` SERVICIO_NO_DISPONIBLE |
+| `GET` | `/api/ordenes/:id` | JWT, dueño o `ADMIN` | Consulta una orden | `200` · `400` · `401` · `403` orden ajena · `404` |
+| `GET` | `/api/ordenes/cliente/:clienteId?estado=` | JWT, dueño o `ADMIN` | Historial del cliente, más reciente primero | `200` (`[]` si no tiene órdenes) · `400` · `401` · `403` historial ajeno |
+| `GET` | `/health` | Público | Salud del servicio | `200` |
+| `GET` | `/api-docs` | Público | Swagger UI | `200` |
+
+## Seguridad (TP7)
+
+### Autenticación
+
+Todos los endpoints de `/api/ordenes` usan el middleware `autenticarJWT` (`src/middlewares/authMiddleware.js`, el mismo que catalog e inventory). Valida el token **localmente** con `JWT_SECRET` y `JWT_ISSUER`, sin consultar a `auth-service`:
+
+| Situación | Respuesta |
+|---|---|
+| Sin header `Authorization` | `401 TOKEN_NO_PROPORCIONADO` |
+| Header que no es `Bearer <token>` | `401 TOKEN_MAL_FORMADO` |
+| Firma adulterada o emisor distinto | `401 TOKEN_INVALIDO` |
+| Token vencido (`exp`) | `401 TOKEN_VENCIDO` |
+| Rol distinto de `USER` / `ADMIN` | `403 PERMISOS_INSUFICIENTES` |
+
+### Propiedad del recurso (sección 11.2)
+
+Además del rol, se controla **de quién es la orden** (`src/controllers/ordenesController.js`):
+
+| Endpoint | `USER` | `ADMIN` |
+|---|---|---|
+| `POST /api/ordenes` | La orden queda siempre a nombre del `sub` de su token. Si manda un `clienteId` distinto → `403 ACCESO_DENEGADO` | Puede indicar el `clienteId` de otro cliente (si no lo manda, queda a su nombre) |
+| `GET /api/ordenes/:id` | Solo si `orden.clienteId === sub`; si no → `403 ACCESO_DENEGADO` | Cualquier orden |
+| `GET /api/ordenes/cliente/:clienteId` | Solo si `:clienteId === sub`; si no → `403 ACCESO_DENEGADO` | Cualquier cliente |
+
+Cada `403` se loguea con `operacion: auth.ownership.forbidden`, el usuario y el recurso pedido (nunca el token).
+
+### Propagación del token (sección 13)
+
+En una compra, orders-service reenvía el **mismo** `Authorization: Bearer <JWT>` que recibió del cliente cuando llama a `inventory-service`:
+
+- `POST /api/inventario/:libroId/descontar`
+- `POST /api/inventario/:libroId/revertir` (compensación inmediata ante timeout)
+
+Así inventario valida por su cuenta la identidad y el rol del usuario real. Si inventario rechaza el token (`401`/`403`), la orden termina `RECHAZADA / NO_AUTORIZADO` (`403`) y el stock no se toca. A `catalog-service` no se le envía el token porque `GET /api/libros/:id` es público (mínimo privilegio).
+
+**Compensaciones en segundo plano.** El reintento periódico de compensaciones pendientes no ocurre dentro de la petición de un usuario, así que no hay un token de cliente para propagar, y guardar tokens de usuarios en la base sería inseguro. Para ese caso, orders-service firma un **token técnico de 60 segundos** con `sub: "orders-service"`, `tipo: "servicio"` y el rol mínimo que inventario acepta en `/revertir` (`USER`). Es una decisión documentada; la mejora futura es que `auth-service` emita credenciales de servicio (*client credentials*).
 
 En los rechazos también se devuelve el `ordenId`, como comprobante de que el intento existió:
 
@@ -75,11 +113,14 @@ Ver [`.env.example`](.env.example).
 | `INVENTORY_SERVICE_URL` | `http://localhost:3002` | `http://inventory-service:3000` |
 | `HTTP_TIMEOUT_MS` | `3000` | `3000` |
 | `COMPENSACION_INTERVALO_MS` | `30000` | `30000` |
+| `JWT_SECRET` | igual al de auth-service | `${JWT_SECRET}` (compartido en Compose) |
+| `JWT_ISSUER` | `auth-service-grupo1` | `auth-service-grupo1` |
+| `AUTH_SERVICE_URL` | `http://localhost:3004` | `http://auth-service:3000` (solo lo usa `test-compra.js`) |
 | `LOG_LEVEL` | `info` | `info` |
 
 ## Ejecución local
 
-Requiere Node.js 20+, MongoDB en `27017` y `catalog-service` (3001) e `inventory-service` (3002) levantados.
+Requiere Node.js 20+, MongoDB en `27017` y `auth-service` (3004), `catalog-service` (3001) e `inventory-service` (3002) levantados, todos con el mismo `JWT_SECRET`.
 
 ```bash
 cd services/orders-service
@@ -100,19 +141,20 @@ Con Docker Compose, desde la raíz: `docker compose up --build`.
 
 ## Prueba de punta a punta
 
-Con los tres servicios levantados (local o Compose):
+Con los cuatro servicios levantados (local o Compose):
 
 ```bash
 npm run test:compra
 ```
 
-Verifica una compra simple, los rechazos (404 / 409 / 400) y compras simultáneas: nunca se confirman más órdenes que unidades y el stock final cuadra con las órdenes confirmadas.
+Se loguea en `auth-service` como `ADMIN` (para crear el libro y el stock) y como `USER` (para comprar). Verifica que la compra sin token da `401`, una compra simple, los rechazos (404 / 409 / 400) y compras simultáneas: nunca se confirman más órdenes que unidades y el stock final cuadra con las órdenes confirmadas.
 
 ## Estructura
 
 ```
 orders-service/
 ├── src/
+│   ├── middlewares/authMiddleware.js    # TP7: autenticarJWT y requerirRol
 │   ├── routes/ordenesRoutes.js          # rutas + Swagger
 │   ├── controllers/ordenesController.js # validación HTTP
 │   ├── services/ordenesService.js       # orquestación de la compra y compensaciones
