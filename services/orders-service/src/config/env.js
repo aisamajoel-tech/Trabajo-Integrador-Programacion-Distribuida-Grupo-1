@@ -20,6 +20,10 @@ const env = {
   HTTP_TIMEOUT_MS: entero(process.env.HTTP_TIMEOUT_MS, 3000),
   // Cada cuánto se reintenta la compensación de órdenes cuyo descuento quedó en duda (ms)
   COMPENSACION_INTERVALO_MS: entero(process.env.COMPENSACION_INTERVALO_MS, 30000),
+  // TP7: validación local (stateless) del JWT emitido por auth-service.
+  // El secreto llega por variable de entorno; el valor por defecto es solo para desarrollo.
+  JWT_SECRET: process.env.JWT_SECRET || 'dev_jwt_secret_grupo1_cambiar_en_entorno_real_2026',
+  JWT_ISSUER: process.env.JWT_ISSUER || 'auth-service-grupo1',
   LOG_LEVEL: process.env.LOG_LEVEL || 'info',
   DB_RETRY_INTERVAL_MS: entero(process.env.DB_RETRY_INTERVAL_MS, 5000)
 };

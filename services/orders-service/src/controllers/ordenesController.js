@@ -11,6 +11,25 @@ function responderError(res, status, codigo, error, extra = {}) {
   return res.status(status).json({ error, codigo, ...extra });
 }
 
+/**
+ * TP7 — Propiedad del recurso (sección 11.2).
+ * Un ADMIN accede a cualquier orden; un USER solo a las que tienen su `sub` como clienteId.
+ */
+const esAdmin = (req) => req.user?.role === 'ADMIN';
+const esDueno = (req, clienteId) => String(clienteId) === String(req.user?.sub);
+
+function denegarPropiedad(req, res, mensaje, extra = {}) {
+  logger.warn('Autorización denegada en orders-service por propiedad del recurso (403)', {
+    operacion: 'auth.ownership.forbidden',
+    endpoint: `${req.method} ${req.originalUrl}`,
+    usuarioId: req.user?.sub,
+    rolActual: req.user?.role,
+    requestId: req.requestId,
+    ...extra
+  });
+  return responderError(res, 403, 'ACCESO_DENEGADO', mensaje);
+}
+
 function dbDisponible(req, res) {
   if (estaConectadoMongo()) return true;
   logger.error('Operación rechazada: db_orders no disponible', { endpoint: `${req.method} ${req.originalUrl}` });
@@ -28,11 +47,13 @@ function manejarError(err, req, res, next) {
 
 /** POST /api/ordenes */
 async function crearOrden(req, res, next) {
-  const { clienteId, libroId, cantidad } = body(req);
+  const { clienteId: clienteIdBody, libroId, cantidad } = body(req);
 
   // Validación del body: si falla -> 400 sin crear orden ni llamar a otros servicios
   const detalles = [];
-  if (!textoNoVacio(clienteId)) detalles.push('clienteId es obligatorio (texto no vacío).');
+  if (clienteIdBody !== undefined && !textoNoVacio(clienteIdBody)) {
+    detalles.push('clienteId, si se envía, debe ser un texto no vacío.');
+  }
   if (!textoNoVacio(libroId)) detalles.push('libroId es obligatorio (texto no vacío).');
   else if (!OBJECT_ID.test(libroId)) detalles.push('libroId debe ser un ObjectId de 24 caracteres hexadecimales.');
   if (!Number.isInteger(cantidad) || cantidad < 1) detalles.push('cantidad debe ser un entero mayor o igual a 1.');
@@ -40,12 +61,24 @@ async function crearOrden(req, res, next) {
     return responderError(res, 400, 'VALIDACION_FALLIDA', 'Datos de la orden inválidos.', { detalles });
   }
 
+  // Propiedad del recurso: la compra de un USER siempre queda a nombre del `sub` de su token.
+  // Si manda un clienteId distinto -> 403. Un ADMIN puede comprar para otro cliente.
+  const clienteIdPedido = typeof clienteIdBody === 'string' ? clienteIdBody.trim() : undefined;
+  if (!esAdmin(req) && clienteIdPedido && !esDueno(req, clienteIdPedido)) {
+    return denegarPropiedad(req, res, 'No puede crear una orden a nombre de otro cliente.', {
+      clienteIdSolicitado: clienteIdPedido
+    });
+  }
+  const clienteId = esAdmin(req) && clienteIdPedido ? clienteIdPedido : String(req.user.sub);
+
   if (!dbDisponible(req, res)) return;
 
   try {
+    // El mismo Authorization: Bearer <JWT> recibido se propaga a inventory-service (sección 13)
     const { status, body: respuesta } = await ordenesService.crearOrden(
-      { clienteId: clienteId.trim(), libroId, cantidad },
-      req.requestId
+      { clienteId, libroId, cantidad },
+      req.requestId,
+      req.headers.authorization
     );
     return res.status(status).json(respuesta);
   } catch (err) {
@@ -64,6 +97,9 @@ async function obtenerOrden(req, res, next) {
   try {
     const orden = await ordenesService.obtenerOrden(id);
     if (!orden) return responderError(res, 404, 'ORDEN_NO_ENCONTRADA', 'No existe una orden con ese id.');
+    if (!esAdmin(req) && !esDueno(req, orden.clienteId)) {
+      return denegarPropiedad(req, res, 'No tiene permiso para acceder a esta orden.', { ordenId: id });
+    }
     return res.status(200).json(orden);
   } catch (err) {
     return manejarError(err, req, res, next);
@@ -76,6 +112,11 @@ async function historialCliente(req, res, next) {
   const { estado } = req.query;
   if (estado !== undefined && !ESTADOS.includes(estado)) {
     return responderError(res, 400, 'VALIDACION_FALLIDA', `estado debe ser uno de: ${ESTADOS.join(', ')}.`);
+  }
+  if (!esAdmin(req) && !esDueno(req, clienteId)) {
+    return denegarPropiedad(req, res, 'No tiene permiso para consultar el historial de otro cliente.', {
+      clienteIdSolicitado: clienteId
+    });
   }
   if (!dbDisponible(req, res)) return;
 
