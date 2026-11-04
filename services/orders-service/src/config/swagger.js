@@ -13,9 +13,20 @@ const swaggerDefinition = {
     version: '1.0.0',
     description:
       'Microservicio que orquesta la compra (`db_orders`). Consulta a catalog-service y a inventory-service ' +
-      'solo por sus APIs públicas y registra cada intento de compra con su resultado.'
+      'solo por sus APIs públicas y registra cada intento de compra con su resultado.\n\n' +
+      '**Seguridad (TP7):** todos los endpoints de `/api/ordenes` requieren `Authorization: Bearer <JWT>` ' +
+      'emitido por auth-service (`POST /api/auth/login`). Un `USER` solo compra a su nombre y solo ve sus órdenes; ' +
+      'un `ADMIN` puede ver todas. `/health` y `/api-docs` son públicos.'
   },
   components: {
+    securitySchemes: {
+      bearerAuth: {
+        type: 'http',
+        scheme: 'bearer',
+        bearerFormat: 'JWT',
+        description: 'Access token obtenido en auth-service: POST /api/auth/login.'
+      }
+    },
     parameters: {
       RequestId: {
         in: 'header',
@@ -26,11 +37,24 @@ const swaggerDefinition = {
       }
     },
     schemas: {
+      ErrorResponse: {
+        type: 'object',
+        properties: {
+          error: { type: 'string', example: 'No tiene permiso para acceder a esta orden.' },
+          codigo: { type: 'string', example: 'ACCESO_DENEGADO' }
+        }
+      },
       OrdenInput: {
         type: 'object',
-        required: ['clienteId', 'libroId', 'cantidad'],
+        required: ['libroId', 'cantidad'],
         properties: {
-          clienteId: { type: 'string', example: 'cli-0042' },
+          clienteId: {
+            type: 'string',
+            example: '6720a1b2c3d4e5f600000002',
+            description:
+              'Opcional. Si el rol es USER, la orden se asocia siempre al `sub` del token (si se envía distinto -> 403). ' +
+              'Un ADMIN puede indicar el cliente para el que compra.'
+          },
           libroId: { type: 'string', example: LIBRO_ID },
           cantidad: { type: 'integer', minimum: 1, example: 1 }
         }
@@ -69,7 +93,7 @@ const swaggerDefinition = {
           estado: { type: 'string', example: 'RECHAZADA' },
           motivoRechazo: {
             type: 'string',
-            enum: ['LIBRO_INEXISTENTE', 'SIN_STOCK', 'CONCURRENCIA', 'SERVICIO_NO_DISPONIBLE']
+            enum: ['LIBRO_INEXISTENTE', 'SIN_STOCK', 'CONCURRENCIA', 'SERVICIO_NO_DISPONIBLE', 'NO_AUTORIZADO']
           },
           mensaje: { type: 'string' }
         }

@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 
 const ESTADOS = ['PENDIENTE', 'CONFIRMADA', 'RECHAZADA'];
-const MOTIVOS = ['LIBRO_INEXISTENTE', 'SIN_STOCK', 'CONCURRENCIA', 'SERVICIO_NO_DISPONIBLE'];
+// NO_AUTORIZADO (TP7): inventory-service rechazó el JWT propagado (401/403); el stock no se tocó.
+const MOTIVOS = ['LIBRO_INEXISTENTE', 'SIN_STOCK', 'CONCURRENCIA', 'SERVICIO_NO_DISPONIBLE', 'NO_AUTORIZADO'];
 
 /**
  * Orden de compra en db_orders (spec: docs/servicios/orders-service.md, sección 2).

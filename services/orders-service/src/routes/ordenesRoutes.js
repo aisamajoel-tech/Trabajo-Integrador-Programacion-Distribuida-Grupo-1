@@ -1,6 +1,17 @@
 const express = require('express');
 const router = express.Router();
 const controller = require('../controllers/ordenesController');
+const { autenticarJWT, requerirRol } = require('../middlewares/authMiddleware');
+
+/**
+ * TP7 — Seguridad de orders-service:
+ *  - Todos los endpoints de /api/ordenes exigen un JWT válido (401 si falta, está mal formado,
+ *    tiene la firma adulterada o está vencido).
+ *  - Roles permitidos: USER y ADMIN.
+ *  - Propiedad del recurso (sección 11.2): un USER solo compra a su nombre y solo ve sus órdenes;
+ *    un ADMIN puede ver todas. Esa regla se aplica en el controller (403 si no se cumple).
+ */
+const autenticado = [autenticarJWT, requerirRol('USER', 'ADMIN')];
 
 /**
  * @openapi
@@ -8,10 +19,15 @@ const controller = require('../controllers/ordenesController');
  *   post:
  *     summary: Crear una orden de compra (punto de entrada de la compra)
  *     description: >
+ *       Requiere JWT (USER o ADMIN). Si el rol es USER, la orden se asocia al `sub` del token
+ *       (el `clienteId` del body es opcional; si se envía distinto del `sub` -> 403). Un ADMIN
+ *       puede indicar el `clienteId` de otro cliente. El token se propaga a inventory-service.
  *       Persiste la orden como PENDIENTE, verifica el libro en catalog-service y pide el descuento
  *       a inventory-service. Termina en CONFIRMADA o RECHAZADA (con motivo). En los rechazos
  *       también se devuelve el ordenId como comprobante del intento.
  *     tags: [Órdenes]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - $ref: '#/components/parameters/RequestId'
  *     requestBody:
@@ -29,6 +45,20 @@ const controller = require('../controllers/ordenesController');
  *               $ref: '#/components/schemas/OrdenConfirmada'
  *       400:
  *         description: Body inválido (VALIDACION_FALLIDA). No se crea orden.
+ *       401:
+ *         description: Sin token, token mal formado, firma inválida o token vencido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: >
+ *           ACCESO_DENEGADO si un USER intenta comprar a nombre de otro cliente (clienteId distinto del `sub`
+ *           del token), u Orden RECHAZADA — NO_AUTORIZADO si inventory-service rechazó el JWT propagado.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Orden RECHAZADA — LIBRO_INEXISTENTE.
  *         content:
@@ -44,15 +74,19 @@ const controller = require('../controllers/ordenesController');
  *       503:
  *         description: Orden RECHAZADA — SERVICIO_NO_DISPONIBLE (catálogo o inventario caído / timeout), o db_orders no disponible.
  */
-router.post('/', controller.crearOrden);
+router.post('/', autenticado, controller.crearOrden);
 
 /**
  * @openapi
  * /api/ordenes/cliente/{clienteId}:
  *   get:
  *     summary: Historial de órdenes de un cliente
- *     description: Ordenado de la más reciente a la más antigua. Si no tiene órdenes devuelve [].
+ *     description: >
+ *       Ordenado de la más reciente a la más antigua. Si no tiene órdenes devuelve [].
+ *       Un USER solo puede pedir su propio historial (`clienteId` = `sub` del token); un ADMIN, el de cualquiera.
  *     tags: [Órdenes]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: clienteId
@@ -73,16 +107,32 @@ router.post('/', controller.crearOrden);
  *                 $ref: '#/components/schemas/Orden'
  *       400:
  *         description: Filtro de estado inválido.
+ *       401:
+ *         description: Sin token, token mal formado, firma inválida o token vencido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Un USER consulta el historial de otro cliente.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  */
-router.get('/cliente/:clienteId', controller.historialCliente);
+router.get('/cliente/:clienteId', autenticado, controller.historialCliente);
 
 /**
  * @openapi
  * /api/ordenes/{id}:
  *   get:
  *     summary: Consultar una orden
- *     description: No llama a otros servicios; todo está en db_orders (incluido el libroSnapshot).
+ *     description: >
+ *       No llama a otros servicios; todo está en db_orders (incluido el libroSnapshot).
+ *       Un USER solo puede ver sus propias órdenes; un ADMIN, cualquiera.
  *     tags: [Órdenes]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: id
@@ -97,9 +147,21 @@ router.get('/cliente/:clienteId', controller.historialCliente);
  *               $ref: '#/components/schemas/Orden'
  *       400:
  *         description: id con formato inválido.
+ *       401:
+ *         description: Sin token, token mal formado, firma inválida o token vencido.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
+ *       403:
+ *         description: Un USER consulta una orden que no es suya.
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ErrorResponse'
  *       404:
  *         description: Orden inexistente.
  */
-router.get('/:id', controller.obtenerOrden);
+router.get('/:id', autenticado, controller.obtenerOrden);
 
 module.exports = router;

@@ -9,19 +9,25 @@ const { llamar } = require('./httpClient');
  *  - 'SIN_STOCK'      400 (stock insuficiente) o 404 (el libro no tiene registro de stock)
  *  - 'CONCURRENCIA'   409 (lock ocupado)
  *  - 'NO_DISPONIBLE'  503 o sin conexión: el descuento NO se aplicó
+ *  - 'NO_AUTORIZADO'  401 / 403: inventario rechazó el token propagado; el descuento NO se aplicó
  *  - 'INCIERTO'       timeout u otro 5xx: no se sabe si se aplicó -> hay que compensar
+ *
+ * TP7: `authorization` es el header "Bearer <JWT>" del cliente, que se propaga a inventario
+ * porque /descontar y /revertir exigen un usuario autenticado (USER o ADMIN).
  */
-async function descontar(libroId, { cantidad, clienteId, ordenId }, requestId) {
+async function descontar(libroId, { cantidad, clienteId, ordenId }, requestId, authorization) {
   const r = await llamar({
     dependencia: 'inventory-service',
     metodo: 'POST',
     url: `${INVENTORY_SERVICE_URL}/api/inventario/${encodeURIComponent(libroId)}/descontar`,
     body: { cantidad, clienteId, ordenId },
-    requestId
+    requestId,
+    authorization
   });
 
   if (!r.ok) return { resultado: r.fallo === 'TIMEOUT' ? 'INCIERTO' : 'NO_DISPONIBLE', causa: r.causa };
   if (r.status === 200) return { resultado: 'DESCONTADO', data: r.data };
+  if (r.status === 401 || r.status === 403) return { resultado: 'NO_AUTORIZADO', status: r.status, data: r.data };
   if (r.status === 400 || r.status === 404) return { resultado: 'SIN_STOCK', data: r.data };
   if (r.status === 409) return { resultado: 'CONCURRENCIA', data: r.data };
   if (r.status === 503) return { resultado: 'NO_DISPONIBLE', causa: r.data?.codigo || 'HTTP 503' };
@@ -33,13 +39,14 @@ async function descontar(libroId, { cantidad, clienteId, ordenId }, requestId) {
  * Inventario solo devuelve unidades si ese ordenId realmente descontó (es seguro reintentar).
  * Devuelve true si inventario respondió 200 (revertido o "no había nada que revertir").
  */
-async function revertir(libroId, ordenId, requestId) {
+async function revertir(libroId, ordenId, requestId, authorization) {
   const r = await llamar({
     dependencia: 'inventory-service',
     metodo: 'POST',
     url: `${INVENTORY_SERVICE_URL}/api/inventario/${encodeURIComponent(libroId)}/revertir`,
     body: { ordenId },
-    requestId
+    requestId,
+    authorization
   });
   return { exito: r.ok && r.status === 200, data: r.data, causa: r.causa || (r.ok ? `HTTP ${r.status}` : undefined) };
 }

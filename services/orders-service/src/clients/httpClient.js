@@ -11,15 +11,20 @@ const logger = require('../config/logger');
  * TIMEOUT y SIN_CONEXION se separan porque no significan lo mismo:
  *  - SIN_CONEXION (conexión rechazada, DNS): el pedido nunca llegó al destino.
  *  - TIMEOUT: el pedido pudo haber llegado y procesarse; solo se perdió la respuesta.
+ *
+ * TP7: si se recibe `authorization` (el header "Bearer <JWT>" del cliente), se reenvía tal cual
+ * al servicio remoto para que valide la identidad y el rol del usuario (propagación, sección 13).
+ * El token nunca se escribe en los logs.
  */
-async function llamar({ dependencia, metodo, url, body, requestId }) {
+async function llamar({ dependencia, metodo, url, body, requestId, authorization }) {
   const inicio = Date.now();
   try {
     const res = await fetch(url, {
       method: metodo,
       headers: {
         'Content-Type': 'application/json',
-        'x-request-id': requestId
+        'x-request-id': requestId,
+        ...(authorization ? { Authorization: authorization } : {})
       },
       body: body ? JSON.stringify(body) : undefined,
       signal: AbortSignal.timeout(HTTP_TIMEOUT_MS)
@@ -30,6 +35,17 @@ async function llamar({ dependencia, metodo, url, body, requestId }) {
       data = await res.json();
     } catch {
       data = null;
+    }
+
+    if (res.status === 401 || res.status === 403) {
+      logger.warn(`${dependencia} rechazó la credencial propagada (${res.status})`, {
+        origen: SERVICE_NAME,
+        dependencia,
+        causa: `HTTP ${res.status}`,
+        codigoRemoto: data?.codigo,
+        tokenPropagado: Boolean(authorization),
+        requestId
+      });
     }
 
     if (res.status >= 500) {
