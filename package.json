@@ -1,0 +1,12 @@
+{
+  "name": "sistema-libreria-distribuida",
+  "version": "1.0.0",
+  "description": "Plataforma Distribuida de Librería Comercial en Microservicios (Catálogo, Inventario con Redis Lock, Órdenes y Autenticación JWT/RBAC)",
+  "main": "iniciar-sistema.js",
+  "scripts": {
+    "start": "node iniciar-sistema.js",
+    "seed": "node scripts/seed/seed.js"
+  },
+  "author": "Grupo 1 - Universidad Champagnat",
+  "license": "ISC"
+}

@@ -1,215 +1,177 @@
-# Programación Distribuida - Trabajo Práctico Integrador
-**Universidad Champagnat - Licenciatura en Sistemas de Información**
-**Grupo N° 1**
+# 📚 NovaLectura — Plataforma Distribuida de Librería Comercial
 
-Repositorio único y evolutivo para los Trabajos Prácticos de la cátedra de Programación Distribuida.
+**NovaLectura** es una tienda web y plataforma comercial de librería construida bajo una arquitectura de **Microservicios Desacoplados** siguiendo el patrón **MVC (Modelo–Vista–Controlador) + Capa de Servicios**.
 
----
-
-## 👥 Integrantes del Grupo 1
-* **Joel Aisama** - [@aisamajoel-tech](https://github.com/aisamajoel-tech)
-* **Bautista Navarro** - [@BautiNavarro](https://github.com/BautiNavarro)
-* **Candela Aguilar** - [@candeaguilar](https://github.com/candeaguilar)
-* **Delfina Ibáñez** - [@delfinaibanez](https://github.com/delfinaibanez)
-* **Carolina Fetta** - [@gcfetta](https://github.com/gcfetta)
-
-### Docentes Colaboradores
-* Prof. Adriel Álvarez (`alvarezadriel@uch.edu.ar`)
-* Prof. Edgardo Cortez (`cortezedgardo@uch.edu.ar`)
+El sistema permite explorar un catálogo editorial en tiempo real, gestionar el stock físico en depósito con **exclusión mutua distribuida (Redis Lock)** para evitar la sobreventa cuando múltiples clientes compran el último ejemplar simultáneamente, procesar órdenes de compra con comprobantes históricos inmutables (`libroSnapshot`) y proteger las operaciones mediante **Autenticación JWT (`HS256`) y Control de Acceso Basado en Roles (`RBAC`: `USER` y `ADMIN`)**.
 
 ---
 
-## 🏗️ Arquitectura (TP6)
+## 🚀 Cómo Clonar y Levantar el Sistema
 
-El monolito `app-base` se migró a **3 microservicios** independientes, cada uno con su propia base de datos, orquestados con Docker Compose.
+Podés clonar y levantar el sistema completo (Tienda Web + 4 Microservicios + Bases de Datos + Motor de Locks) de dos maneras:
 
-| Servicio | Responsabilidad | Base propia | Depende de |
-|---|---|---|---|
-| `catalog-service` | Catálogo de libros (CRUD) | `db_catalog` (`catalog-db`) | — |
-| `inventory-service` | Stock y descuentos con lock distribuido | `db_inventory` (`inventory-db`) + Redis | — |
-| `orders-service` | Órdenes de compra (orquesta la compra) | `db_orders` (`orders-db`) | catalog, inventory (HTTP) |
+### Opción A — Ejecución Inmediata con Node.js (Recomendada / Sin requerir Docker)
 
-**Flujo de una compra** (`POST /api/ordenes`): `orders` registra la orden `PENDIENTE` → consulta a `catalog` si el libro existe → pide a `inventory` descontar el stock (con lock Redis, idempotente por `ordenId`) → cierra la orden como `CONFIRMADA` o `RECHAZADA`.
+No requiere tener Docker Desktop ni MongoDB instalados localmente. Levanta los 4 microservicios en sus puertos reales (`3001`, `3002`, `3003`, `3004`) y la Tienda Web Comercial en el puerto `3000`.
 
-Principios: cada servicio escribe **solo en su propia base**; la comunicación es **HTTP** (sin acceso cruzado a bases); las referencias entre servicios son lógicas (`libroId`, `ordenId`).
+1. **Clonar el repositorio e instalar dependencias:**
+   ```bash
+   git clone https://github.com/aisamajoel-tech/Trabajo-Integrador-Programacion-Distribuida-Grupo-1.git
+   cd Trabajo-Integrador-Programacion-Distribuida-Grupo-1
+   npm install
+   npm start
+   ```
+   *(O en Windows, simplemente hacé doble clic sobre el archivo **`INICIAR_SISTEMA.bat`**).*
 
-Más detalle: [`docs/arquitectura.md`](docs/arquitectura.md) · [`docs/servicios/`](docs/servicios/) · [`docs/diagrama-arquitectura.mermaid`](docs/diagrama-arquitectura.mermaid)
+2. **Abrir la Tienda Web en el navegador:**
+   👉 **http://localhost:3000**
 
 ---
 
-## 📋 Requisitos
-* **Docker Desktop** (incluye Docker Compose v2). Verificar: `docker --version` y `docker compose version`.
-* **Node.js 20+** (solo para correr el seed y los scripts de prueba desde el host).
-* Puertos libres en el host: **3001, 3002 y 3003**.
+### Opción B — Ejecución en Contenedores con Docker Compose
 
-## 🐳 Puesta en marcha con Docker
+Si tenés **Docker Desktop** corriendo y querés levantar la infraestructura completa de contenedores (`catalog-service`, `inventory-service`, `orders-service`, `auth-service`, 4 instancias independientes de `MongoDB 7` y `Redis 7 Alpine`):
 
 ```bash
-# 1. (Opcional) variables de entorno de Compose; todas tienen valor por defecto
 cp .env.example .env
-
-# 2. Construir y levantar todo
-docker compose up --build -d
-
-# 3. Verificar que los 7 contenedores estén "healthy"
-docker compose ps
-
-# 4. Cargar datos de prueba
-node scripts/seed/seed.js
+docker compose up -d --build
 ```
 
-### Comandos Compose útiles
-
-| Acción | Comando |
-|---|---|
-| Levantar construyendo imágenes | `docker compose up --build -d` |
-| Ver estado y salud | `docker compose ps` |
-| Ver logs de un servicio | `docker compose logs -f orders-service` |
-| Detener un servicio | `docker compose stop inventory-service` |
-| Iniciar un servicio detenido | `docker compose start inventory-service` |
-| Recrear un servicio | `docker compose up -d --force-recreate catalog-service` |
-| Validar el archivo | `docker compose config` |
-| Bajar todo **conservando** los datos | `docker compose down` |
-| Bajar todo **borrando** los volúmenes | `docker compose down -v` |
-
-## 🌐 Puertos, Swagger y Health
-
-Solo se publican al host los puertos de los servicios. Las bases de datos y Redis **no** se publican.
-
-| Servicio | Puerto host → contenedor | Swagger | Health |
-|---|---|---|---|
-| `catalog-service` | `3001 → 3000` | http://localhost:3001/api-docs | http://localhost:3001/health |
-| `inventory-service` | `3002 → 3000` | http://localhost:3002/api-docs | http://localhost:3002/health |
-| `orders-service` | `3003 → 3000` | http://localhost:3003/api-docs | http://localhost:3003/health |
-
-## ⚙️ Variables de entorno
-
-El código no tiene hosts ni puertos fijos: todo se configura por variables (mismo código en local y en Docker).
-
-| Variable | Servicio | En Compose | Descripción |
-|---|---|---|---|
-| `PORT` | todos | `3000` | Puerto interno |
-| `SERVICE_NAME` | todos | nombre del servicio | Aparece en logs y `/health` |
-| `MONGODB_URI` | todos | `mongodb://<servicio>-db:27017/db_<nombre>` | Base propia de cada servicio |
-| `REDIS_URL` | inventory | `redis://redis:6379` | Lock distribuido |
-| `LOCK_TTL_MS` | inventory | `5000` | Duración del lock |
-| `CATALOG_SERVICE_URL` | orders | `http://catalog-service:3000` | URL del catálogo |
-| `INVENTORY_SERVICE_URL` | orders | `http://inventory-service:3000` | URL de inventario |
-| `HTTP_TIMEOUT_MS` | orders | `3000` | Timeout de llamadas entre servicios |
-| `COMPENSACION_INTERVALO_MS` | orders | `30000` | Reintento de compensaciones pendientes |
-| `LOG_LEVEL` | todos | `info` | `error`, `warn`, `info`, `debug` |
-| `CATALOG_HOST_PORT` / `INVENTORY_HOST_PORT` / `ORDERS_HOST_PORT` | Compose | `3001` / `3002` / `3003` | Puertos publicados en el host |
-
-Cada servicio incluye su `.env.example` para correrlo en local sin Docker.
-
-## 🔗 DNS interno y volúmenes
-
-* **DNS interno:** los contenedores están en la red `backend`; Compose resuelve cada servicio por su nombre (`catalog-service`, `inventory-service`, `catalog-db`, `redis`, etc.). Por eso `orders-service` usa `http://catalog-service:3000` y no `localhost`.
-* **Volúmenes nombrados:** `catalog_db_data`, `inventory_db_data` y `orders_db_data` (uno por MongoDB). Los datos **sobreviven** a `docker compose down` y se **pierden** solo con `docker compose down -v`.
-* **Arranque ordenado:** `depends_on` con `condition: service_healthy`; cada servicio espera a que su base esté saludable.
-
-## 🌱 Datos de prueba
+Para poblar las 4 bases de datos con los libros iniciales, el stock y los usuarios de prueba (`ADMIN` y `USER`):
 
 ```bash
-node scripts/seed/seed.js
+cd scripts/seed
+npm install
+npm run seed
 ```
-
-Carga 5 libros y su stock **a través de las APIs** (nunca toca las bases). Es idempotente. Detalle en [`scripts/seed/README.md`](scripts/seed/README.md).
-
-## ✅ Instalación y verificación de Docker
-
-En Windows se usa Docker Desktop con backend WSL 2. Verificación mínima:
-
-```bash
-wsl --status          # solo Windows
-docker --version
-docker compose version
-docker info
-docker run --rm hello-world
-```
-
-## 🔄 Cambios respecto del TP5
-
-| Cambio | Justificación |
-|---|---|
-| `reset-stock` pasa a `POST /api/inventario/:libroId/reponer` | La reposición es una regla de negocio de inventario y se expresa con una operación explícita. |
-| Se elimina `comprar-inseguro` | Era un endpoint de demostración de la condición de carrera del monolito; ya no tiene sentido. |
-| La compra se orquesta en `orders-service` (`POST /api/ordenes`) | `orders` consulta a `catalog` y delega el descuento en `inventory`, sin acceder a sus bases. |
-| Nuevo `POST /api/inventario/:libroId/revertir` y uso de `ordenId` | Permite descuentos idempotentes y compensar un descuento incierto (ver análisis de fallo parcial). |
-| El lock distribuido (Redis) queda en `inventory-service` | Es el único servicio que modifica el stock. |
-
-Detalle de la ratificación: `docs/tp6/ratificacion-arquitectura.md`.
-
-## 🔀 Ejecución local vs. Docker Compose
-
-El código es el mismo; solo cambian las variables de entorno.
-
-| Variable | Local (`.env` de cada servicio) | Docker Compose |
-|---|---|---|
-| `PORT` | `3001` / `3002` / `3003` | `3000` (publicado `3001`/`3002`/`3003`) |
-| `MONGODB_URI` | `mongodb://127.0.0.1:27017/db_<nombre>` | `mongodb://<servicio>-db:27017/db_<nombre>` |
-| `REDIS_URL` (inventory) | `redis://127.0.0.1:6379` | `redis://redis:6379` |
-| `CATALOG_SERVICE_URL` (orders) | `http://localhost:3001` | `http://catalog-service:3000` |
-| `INVENTORY_SERVICE_URL` (orders) | `http://localhost:3002` | `http://inventory-service:3000` |
-
-## 🚦 Inicio y disponibilidad de dependencias
-
-* Cada MongoDB tiene healthcheck (`mongosh ping`), Redis (`redis-cli ping`) y cada servicio Node (`fetch /health`).
-* `depends_on` con `condition: service_healthy`: los servicios esperan a su base y a Redis, y `orders-service` espera a `catalog-service` e `inventory-service`.
-* Además, la aplicación no asume disponibilidad: `orders-service` reintenta la conexión a su base, `inventory-service` se reconecta solo a Redis (responde `503 REDIS_NO_DISPONIBLE` mientras tanto) y `orders-service` responde `503 SERVICIO_NO_DISPONIBLE` si catalog o inventory no responden.
-
-## 🧪 Pruebas
-
-| Prueba | Comando |
-|---|---|
-| Concurrencia sin sobreventa | `cd services/inventory-service && npm run test:concurrencia` |
-| Compras de punta a punta | `cd services/orders-service && npm run test:compra` |
-
-Tabla completa de pruebas con evidencias: [`docs/tp6/pruebas.md`](docs/tp6/pruebas.md).
-
-## ⚠️ Manejo de indisponibilidad
-
-Si un servicio del que depende `orders-service` no responde (conexión rechazada, DNS o timeout), la compra termina con **`503 SERVICIO_NO_DISPONIBLE`**, la orden queda `RECHAZADA` y `orders-service` **no se cae** (su `/health` sigue en `200`). Al restablecer el servicio, las compras vuelven a funcionar sin reiniciar nada.
-
-```bash
-docker compose stop inventory-service    # comprar -> 503
-docker compose start inventory-service   # comprar -> 201
-```
-
-Evidencia: [`docs/tp6/evidencias/evidencia-orders.md`](docs/tp6/evidencias/evidencia-orders.md). Si Redis no está disponible, `inventory-service` responde `503 REDIS_NO_DISPONIBLE` (nunca `500`).
-
-## 🧩 Fallo parcial
-
-Como cada servicio tiene su propia base, no hay transacción distribuida: si `inventory-service` descuenta el stock pero `orders-service` no logra confirmar la orden, puede haber inconsistencia temporal. El diseño mitiga esto con `ordenId` (descuento idempotente), `requestId` (trazabilidad en logs) y la operación `revertir` (compensación; si el resultado del descuento es incierto por timeout, se reintenta automáticamente).
-
-Análisis completo: [`docs/tp6/analisis-fallo-parcial.md`](docs/tp6/analisis-fallo-parcial.md).
 
 ---
 
-## 📂 Estructura del Repositorio
+## 🔑 Cuentas de Prueba Precargadas (JWT & RBAC)
 
-* `services/catalog-service/`, `services/inventory-service/`, `services/orders-service/`: microservicios con su `Dockerfile`, `.env.example` y `README.md`.
-* `docker-compose.yml`: orquestación de los 3 servicios, 3 MongoDB y Redis.
-* `scripts/seed/`: datos de prueba reproducibles.
-* `docs/`: arquitectura (TP5) y documentación y evidencias de TP6 (`docs/tp6/`).
-* `app-base/`: aplicación monolítica de partida (TP5), conservada como referencia.
+En la barra superior de **http://localhost:3000** podés alternar entre roles con **1 solo clic**, o bien iniciar sesión manualmente desde el botón **"Iniciar Sesión"**:
 
-### Aplicación base (TP5)
-```bash
-cd app-base && npm install && cp .env.example .env && npm start
-```
-Requiere MongoDB en `27017` y Redis/Memurai en `6379`. Swagger en `http://localhost:3000/api-docs`.
+| Rol | Email | Contraseña | Permisos en el Sistema |
+| :--- | :--- | :--- | :--- |
+| **Público (Sin Token)** | *(Visitante)* | — | Puede navegar la tienda, buscar libros por título/autor/ISBN y consultar stock disponible (`GET /api/libros`, `GET /api/inventario`). |
+| **Cliente (`USER`)** | `cliente@libreria.com` | `Cliente123!` | Puede comprar libros (`POST /api/ordenes`) y consultar únicamente sus propios comprobantes de compra (`GET /api/ordenes`). Recibe `403 Forbidden` si intenta crear/borrar libros o reponer stock. |
+| **Otro Cliente (`USER`)** | `otro.cliente@libreria.com` | `Cliente123!` | Segunda cuenta de cliente para probar compras simultáneas y verificar que un cliente no puede ver ni crear órdenes a nombre de otro (`403 ACCESO_DENEGADO`). |
+| **Administrador (`ADMIN`)** | `admin@libreria.com` | `Admin1234!` | Acceso total al **Panel de Gestión de Catálogo y Stock**: alta, edición y baja de libros (`POST/PUT/DELETE /api/libros`), reposición de stock (`POST /api/inventario/:id/reponer`) y auditoría global de órdenes. |
 
 ---
 
-## 🌿 Flujo de Trabajo con Git
+## 🏛️ Arquitectura del Sistema y Patrón MVC
 
-1. `feature/*`: desarrollo de nuevas capacidades.
-2. `docs/*`: documentación técnica y evidencias.
-3. `main`: rama estable con las entregas validadas.
+El proyecto aplica estrictamente el patrón **MVC (Modelo – Vista – Controlador)** combinado con una capa de **Servicios (`services/`)** y **Middlewares (`middlewares/`)** tanto en el portal como en cada uno de los 4 microservicios independientes:
 
-Cada cambio entra por Pull Request revisado por un compañero. Marcado de entrega:
-```bash
-git tag tp5-entrega && git push origin tp5-entrega
-git tag tp6-entrega && git push origin tp6-entrega
+```text
+├── INICIAR_SISTEMA.bat                 # Lanzador rápido de 1 clic para Windows
+├── iniciar-sistema.js                  # Orquestador local de los 4 microservicios + Tienda Web
+├── docker-compose.yml                  # Orquestación de 9 contenedores (4 APIs + 4 Mongo + 1 Redis)
+├── package.json
+├── README.md                           # Documentación principal del sistema
+│
+├── src/                                # Estructura MVC unificada del sistema
+│   ├── config/
+│   │   └── env.js                      # Variables de entorno, puertos (3000-3004), JWT_SECRET y TTL Redis
+│   ├── models/                         # [M] CAPA MODELO (Acceso a datos y reglas de persistencia)
+│   │   ├── LibroModel.js               # Modelo de Catálogo Editorial (db_catalog)
+│   │   ├── InventarioModel.js          # Modelo de Stock, Movimientos y Lock Redis (db_inventory)
+│   │   ├── OrdenModel.js               # Modelo de Órdenes de Compra y libroSnapshot (db_orders)
+│   │   └── UsuarioModel.js             # Modelo de Usuarios con hash bcrypt y roles (db_auth)
+│   ├── views/                          # [V] CAPA VISTA (Interfaz de usuario E-Commerce)
+│   │   └── viewRenderer.js             # Renderizador de la Tienda Web NovaLectura
+│   ├── controllers/                    # [C] CAPA CONTROLADOR (Manejo de peticiones y respuestas HTTP)
+│   │   └── index.js                    # Controladores HTTP desacoplados por dominio
+│   ├── routes/                         # ENRUTADORES HTTP (Mapeo de endpoints REST)
+│   │   └── index.js                    # Definición de rutas por servicio
+│   └── middlewares/                    # MIDDLEWARES TRANSVERSALES
+│       └── authMiddleware.js           # Verificación de firma JWT HS256 (401) y rol RBAC (403)
+│
+├── services/                           # Microservicios independientes (Cada uno con su propio MVC)
+│   ├── web-portal/                     # Tienda Web Comercial E-Commerce (Puerto 3000)
+│   │   └── public/index.html           # Vista interactiva: Tienda + Mis Compras + Admin + Monitor
+│   │
+│   ├── catalog-service/                # Microservicio de Catálogo Editorial (Puerto 3001 - db_catalog)
+│   │   └── src/
+│   │       ├── config/                 # Conexión MongoDB, logger y Swagger
+│   │       ├── models/Libro.js         # [Modelo] Esquema Mongoose (titulo, autor, año, genero, isbn)
+│   │       ├── controllers/            # [Controlador] libroController.js
+│   │       ├── services/               # [Servicio] libroService.js
+│   │       ├── routes/                 # [Rutas] libroRoutes.js
+│   │       └── middlewares/            # [Seguridad] authMiddleware.js (JWT + RBAC ADMIN)
+│   │
+│   ├── inventory-service/              # Microservicio de Stock y Concurrencia (Puerto 3002 - db_inventory + Redis)
+│   │   └── src/
+│   │       ├── config/                 # Conexión MongoDB + Cliente Redis
+│   │       ├── models/                 # [Modelo] Inventario.js y MovimientoStock.js
+│   │       ├── controllers/            # [Controlador] inventarioController.js
+│   │       ├── services/               # [Servicio] inventarioService.js + lockService.js (SET NX PX + Lua)
+│   │       ├── routes/                 # [Rutas] inventarioRoutes.js
+│   │       └── middlewares/            # [Seguridad] authMiddleware.js (JWT + RBAC)
+│   │
+│   ├── orders-service/                 # Microservicio Orquestador de Ventas (Puerto 3003 - db_orders)
+│   │   └── src/
+│   │       ├── config/                 # Conexión MongoDB y variables de entorno
+│   │       ├── models/Orden.js         # [Modelo] Orden (PENDIENTE -> CONFIRMADA | RECHAZADA + libroSnapshot)
+│   │       ├── controllers/            # [Controlador] ordenController.js
+│   │       ├── services/               # [Servicio] ordenService.js (Orquestación HTTP y propiedad del recurso)
+│   │       ├── clients/                # Clientes HTTP hacia catalog-service e inventory-service
+│   │       ├── routes/                 # [Rutas] ordenRoutes.js
+│   │       └── middlewares/            # [Seguridad] authMiddleware.js
+│   │
+│   └── auth-service/                   # Microservicio de Identidad y JWT (Puerto 3004 - db_auth)
+│       └── src/
+│           ├── config/                 # Configuración JWT (HS256) y conexión a db_auth
+│           ├── models/Usuario.js       # [Modelo] Usuario (email, passwordHash bcrypt, role USER|ADMIN)
+│           ├── controllers/            # [Controlador] authController.js
+│           ├── services/               # [Servicio] authService.js
+│           ├── routes/                 # [Rutas] authRoutes.js
+│           └── middlewares/            # [Seguridad] authMiddleware.js
+│
+└── scripts/
+    └── seed/seed.js                    # Script idempotente de carga inicial de datos
 ```
+
+---
+
+## 🌐 Mapa de Puertos y Endpoints REST
+
+| Servicio | Puerto | Base de Datos | Endpoints Principales | Acceso / Rol Requerido |
+| :--- | :---: | :---: | :--- | :--- |
+| **Tienda Web (`web-portal`)** | `3000` | — | `GET /` (Interfaz E-Commerce)<br>`GET /api/monitor/estado` | Público |
+| **`catalog-service`** | `3001` | `db_catalog` | `GET /api/libros`<br>`GET /api/libros/:id`<br>`POST /api/libros`<br>`PUT /api/libros/:id`<br>`DELETE /api/libros/:id` | Público<br>Público<br>🔒 Solo `ADMIN`<br>🔒 Solo `ADMIN`<br>🔒 Solo `ADMIN` |
+| **`inventory-service`** | `3002` | `db_inventory` + `Redis` | `GET /api/inventario`<br>`GET /api/inventario/:libroId`<br>`POST /api/inventario/:libroId/descontar`<br>`POST /api/inventario/:libroId/reponer`<br>`POST /api/inventario` | Público<br>Público<br>🔒 `USER` o `ADMIN` (Con Lock Redis)<br>🔒 Solo `ADMIN`<br>🔒 Solo `ADMIN` |
+| **`orders-service`** | `3003` | `db_orders` | `POST /api/ordenes`<br>`GET /api/ordenes`<br>`GET /api/ordenes/:id`<br>`GET /api/ordenes/cliente/:clienteId` | 🔒 `USER` o `ADMIN` (Valida propiedad)<br>🔒 `USER` (ve propias) / `ADMIN` (ve todas)<br>🔒 Dueño de la orden o `ADMIN`<br>🔒 Dueño de la cuenta o `ADMIN` |
+| **`auth-service`** | `3004` | `db_auth` | `POST /api/auth/register`<br>`POST /api/auth/login`<br>`GET /api/auth/me` | Público (crea rol `USER` con `bcrypt`)<br>Público (emite Token JWT `HS256`)<br>🔒 Autenticado (`USER` o `ADMIN`) |
+
+---
+
+## 🔄 Flujo Completo de una Compra y Prevención de Sobreventa
+
+1. **Petición del Cliente:** El cliente autenticado (`Bearer <JWT>`) hace clic en **"Comprar ahora"** en la tienda web (`POST http://localhost:3003/api/ordenes`).
+2. **Validación de Identidad y Propiedad:** `orders-service` verifica la firma del Token JWT (`HS256`) y comprueba que el `clienteId` coincida con el `sub` del token (evitando que un usuario compre a nombre de otro).
+3. **Creación de Orden `PENDIENTE`:** Se persiste la orden en `db_orders` con estado inicial `PENDIENTE`.
+4. **Consulta a Catálogo y `libroSnapshot`:** `orders-service` consulta por HTTP a `catalog-service` (`GET /api/libros/:id`) y guarda una copia inmutable de los datos editoriales (`titulo`, `autor`, `isbn`) dentro de la orden.
+5. **Descuento Atómico con Lock Distribuido en Redis:** `orders-service` invoca a `inventory-service` (`POST /api/inventario/:id/descontar`) propagando el header `Authorization: Bearer <JWT>` y el `x-request-id`:
+   * `inventory-service` adquiere un candado exclusivo en Redis: `SET lock:libro:{id} <token> NX PX 5000`.
+   * Si dos personas intentan comprar el último ejemplar en el mismo milisegundo, la primera adquiere el lock y descuenta el stock (`1 -> 0`), mientras que la segunda recibe `409 Conflict`.
+   * Al finalizar la sección crítica, un **script Lua** libera el candado verificando que el token propietario coincida.
+6. **Resolución Final:** La orden pasa a estado **`CONFIRMADA` (`201 Created`)** o **`RECHAZADA` (`409` / `404` / `503`)** especificando el motivo (`SIN_STOCK`, `CONCURRENCIA`, `LIBRO_INEXISTENTE` o `SERVICIO_NO_DISPONIBLE`).
+
+---
+
+## 🤖 Guía y Reglas de Arquitectura para Agentes de IA (Copilot / Claude / Cursor)
+
+Si abrís este proyecto con un asistente de IA (**GitHub Copilot**, **Claude**, **Cursor**, etc.), el agente debe respetar estrictamente las siguientes reglas de diseño:
+
+1. **Respetar el Patrón MVC en cada Microservicio:**
+   * **Modelos (`models/`):** Contienen únicamente esquemas de datos y operaciones de persistencia de su propia base de datos (**Database per Service**). Ningún servicio puede conectarse a la base de datos de otro servicio.
+   * **Vistas (`views/` y `services/web-portal/public/`):** Toda la interfaz gráfica del usuario vive en `web-portal` y se comunica con los microservicios exclusivamente por HTTP REST JSON.
+   * **Controladores (`controllers/`):** Solo reciben `req` y `res`, validan parámetros de entrada, delegan la lógica de negocio a la capa `services/` o `models/` y devuelven códigos HTTP semánticos (`200`, `201`, `400`, `401`, `403`, `404`, `409`, `503`).
+   * **Rutas (`routes/`):** Definen los endpoints REST y conectan los `middlewares/` (`authenticateJWT`, `requireRole`) antes de invocar al controlador.
+2. **Desacoplamiento Estricto:**
+   * `catalog-service` (`:3001`) **NO** debe tener campo `stock` ni depender de Redis.
+   * `inventory-service` (`:3002`) es el único dueño del stock y del Lock Distribuido en Redis (`lock:libro:{libroId}`).
+   * `orders-service` (`:3003`) coordina las compras por HTTP propagando los headers `Authorization: Bearer <JWT>` y `x-request-id`.
+   * `auth-service` (`:3004`) almacena contraseñas exclusivamente hasheadas con `bcryptjs` (`passwordHash`) y firma tokens JWT con `HS256`.

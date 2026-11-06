@@ -8,6 +8,15 @@ npm-debug.log*
 *.pem
 !certs/cert.pem
 
+# Datos persistentes locales de ejecución
+data/*.json
+sistema-libreria/
+
+# Archivos académicos locales (Word/PDF de Campus y respaldo histórico)
+entregables-campus/
+*.docx
+*.pdf
+
 # Logs
 logs/
 *.log
